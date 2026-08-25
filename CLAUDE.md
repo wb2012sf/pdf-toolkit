@@ -65,16 +65,46 @@ npm run audit        # npm audit at moderate and above
 ```
 
 ## TDD in practice
-`packages/core/src/merge.ts` and `packages/core/test/merge.test.ts` are the
-template: a stub that asserts its inputs and throws "not implemented", plus a
-test that already defines what correct looks like. That test is red right now.
-Making it green, without weakening it, is the first task. Every other
-operation (split, insert, delete, reorder, rotate, extract) follows the same
-shape: stub with asserts, test first, then implement.
+Every operation followed the same shape and any new one should too: write a
+stub that asserts its inputs and throws "not implemented", write the test that
+defines what correct looks like, watch it fail, then implement. Do not weaken
+a test to make it pass. `packages/core/src/merge.ts` with its test is the
+template to copy.
+
+Validation is tiered, which keeps failures specific. Argument shape is checked
+in the stub's asserts, anything needing only the arguments (integer page
+numbers, the overwrite guard) runs before the file is read, and anything
+needing the document (page ranges, permutation completeness) runs after it
+loads. A bad call therefore fails before doing partial work.
+
+Two things worth knowing before writing fixtures:
+- pdf-lib cannot produce a zero page PDF. Saving a page-less document emits a
+  file that loads back with one page. Use `emptyPagePdf()` from
+  `packages/core/test/helpers.ts`, which is hand rolled for that reason.
+- Give fixture pages distinct sizes and assert the exact sequence. Asserting
+  page counts alone lets a wrong page order pass.
 
 ## Definition of done for v1
-- merge, split, insert, delete, reorder, rotate, extract all implemented in
+All four are met as of 2026-08-25.
+- [x] merge, split, insert, delete, reorder, rotate, extract implemented in
   `packages/core`, each with a vitest test written before the implementation
-- `packages/cli` exposes each operation as a subcommand
-- every command defaults to non-destructive output
-- `npm audit` clean at moderate level or above
+- [x] `packages/cli` exposes each operation as a subcommand
+- [x] every command defaults to non-destructive output, `--in-place` is opt in
+- [x] `npm audit` clean at moderate level or above
+
+Beyond that list the repo also has Biome wired up, tests covered by the
+typecheck, and GitHub Actions running build, test, lint, a CLI smoke check and
+audit on every push plus weekly.
+
+## Known gaps
+- CI runs on Linux only. `--in-place` renames a file onto its own path, which
+  behaves differently on Windows when a file is held open. Worth proving on
+  `windows-latest` before relying on it from the Tauri side.
+- No LICENSE. The repo is private, so nothing forces the choice yet.
+- The CLI suite resolves core through a vitest alias to its TypeScript
+  sources, so it never exercises the compiled binary. CI covers that with a
+  separate smoke step; keep it if the workflow is ever rewritten.
+
+## Next up
+Not started, and explicitly out of scope for v1: the web app and the Tauri
+desktop app, both reusing `packages/core` unchanged.
