@@ -55,10 +55,13 @@ packages/cli    thin commander wrapper, one subcommand per core function
 
 ## Commands
 ```
-./bootstrap.sh                          # first-time setup
-npm test --workspaces --if-present      # run all tests
-npm run build --workspaces --if-present
-npm run lint --workspaces --if-present
+./bootstrap.sh       # first-time setup
+npm test             # typecheck then run all tests
+npm run build        # core first, then cli
+npm run typecheck    # typecheck src and tests without running them
+npm run lint         # biome check across the monorepo
+npm run format       # biome check --write, applies safe fixes
+npm run audit        # npm audit at moderate and above
 ```
 
 ## TDD in practice
