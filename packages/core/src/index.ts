@@ -4,3 +4,4 @@ export { deletePages } from './delete.js';
 export { insertPages } from './insert.js';
 export { reorderPages } from './reorder.js';
 export { rotatePages } from './rotate.js';
+export { extractPages } from './extract.js';
