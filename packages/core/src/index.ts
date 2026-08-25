@@ -1,1 +1,1 @@
-export {};
+export { mergePdfs } from './merge.js';
