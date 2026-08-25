@@ -1,0 +1,50 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  # Weekly, so a new advisory against an unchanged dependency still surfaces.
+  schedule:
+    - cron: '0 6 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          # Read the pinned version rather than hardcoding it here, so the
+          # two cannot drift apart.
+          node-version-file: .nvmrc
+          cache: npm
+
+      - name: Install
+        run: npm ci
+
+      - name: Build
+        run: npm run build
+
+      - name: Test
+        run: npm test
+
+      - name: Lint
+        run: npm run lint
+
+      # The suite runs against core's TypeScript sources through a vitest
+      # alias, so it never exercises the compiled binary. Check it starts.
+      - name: Smoke test the built CLI
+        run: node packages/cli/dist/index.js --help
+
+      - name: Audit
+        run: npm run audit
