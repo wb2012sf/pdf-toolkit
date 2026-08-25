@@ -5,9 +5,7 @@
   "engines": {
     "node": ">=24 <25"
   },
-  "workspaces": [
-    "packages/*"
-  ],
+  "workspaces": ["packages/*"],
   "scripts": {
     "build": "npm run build -w @pdf-toolkit/core && npm run build -w @pdf-toolkit/cli",
     "test": "npm run test --workspaces --if-present",

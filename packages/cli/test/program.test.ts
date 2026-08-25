@@ -1,8 +1,8 @@
-import { describe, it, expect, afterEach } from 'vitest';
-import { mkdtemp, readdir, readFile, rm, writeFile } from 'node:fs/promises';
+import { mkdtemp, readFile, readdir, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { PDFDocument } from 'pdf-lib';
+import { afterEach, describe, expect, it } from 'vitest';
 import { buildProgram } from '../src/program.js';
 
 type PageSize = [number, number];
@@ -27,10 +27,12 @@ async function pageSizesOf(path: string): Promise<PageSize[]> {
   const doc = await PDFDocument.load(await readFile(path));
   return doc
     .getPages()
-    .map((page): PageSize => [
-      Math.round(page.getWidth()),
-      Math.round(page.getHeight()),
-    ]);
+    .map(
+      (page): PageSize => [
+        Math.round(page.getWidth()),
+        Math.round(page.getHeight()),
+      ]
+    );
 }
 
 async function rotationsOf(path: string): Promise<number[]> {

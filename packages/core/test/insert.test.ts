@@ -1,13 +1,13 @@
-import { describe, it, expect, afterEach } from 'vitest';
 import { mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { afterEach, describe, expect, it } from 'vitest';
 import { insertPages } from '../src/insert.js';
 import {
+  type PageSize,
   emptyPagePdf,
   makeTestPdf,
   pageSizesOf,
-  type PageSize,
 } from './helpers.js';
 
 const BASE: PageSize[] = [

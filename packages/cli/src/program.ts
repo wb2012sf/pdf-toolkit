@@ -1,5 +1,4 @@
 import assert from 'node:assert';
-import { Command } from 'commander';
 import {
   deletePages,
   extractPages,
@@ -9,6 +8,7 @@ import {
   rotatePages,
   splitPdf,
 } from '@pdf-toolkit/core';
+import { Command } from 'commander';
 import { writeResult } from './inPlace.js';
 import { parsePageSpec } from './pages.js';
 

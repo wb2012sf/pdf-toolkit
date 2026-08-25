@@ -50,8 +50,10 @@ export async function pageSizesOf(path: string): Promise<PageSize[]> {
   const doc = await PDFDocument.load(await readFile(path));
   return doc
     .getPages()
-    .map((page): PageSize => [
-      Math.round(page.getWidth()),
-      Math.round(page.getHeight()),
-    ]);
+    .map(
+      (page): PageSize => [
+        Math.round(page.getWidth()),
+        Math.round(page.getHeight()),
+      ]
+    );
 }

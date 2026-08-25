@@ -1,9 +1,9 @@
-import { describe, it, expect, afterEach } from 'vitest';
 import { mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { afterEach, describe, expect, it } from 'vitest';
 import { mergePdfs } from '../src/merge.js';
-import { makeTestPdf, pageSizesOf, type PageSize } from './helpers.js';
+import { type PageSize, makeTestPdf, pageSizesOf } from './helpers.js';
 
 // Distinct page sizes act as identity tags, so the merged document proves
 // which source each page came from and in what order.

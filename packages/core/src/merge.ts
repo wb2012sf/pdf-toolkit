@@ -13,7 +13,10 @@ export async function mergePdfs(
   inputPaths: string[],
   outputPath: string
 ): Promise<void> {
-  assert(Array.isArray(inputPaths), 'mergePdfs requires an array of input paths');
+  assert(
+    Array.isArray(inputPaths),
+    'mergePdfs requires an array of input paths'
+  );
   assert(inputPaths.length > 0, 'mergePdfs requires at least one input path');
   assert(
     typeof outputPath === 'string' && outputPath.length > 0,

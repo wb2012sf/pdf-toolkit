@@ -69,7 +69,8 @@ export async function rotatePages(
     }
     // Normalize into [0, 360) so a negative or multi-turn delta still lands
     // on one of the four rotations a PDF viewer understands.
-    const angle = (((page.getRotation().angle + degreesDelta) % 360) + 360) % 360;
+    const angle =
+      (((page.getRotation().angle + degreesDelta) % 360) + 360) % 360;
     page.setRotation(degrees(angle));
   }
 

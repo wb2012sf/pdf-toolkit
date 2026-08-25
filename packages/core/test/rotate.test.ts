@@ -1,13 +1,13 @@
-import { describe, it, expect, afterEach } from 'vitest';
 import { mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { afterEach, describe, expect, it } from 'vitest';
 import { rotatePages } from '../src/rotate.js';
 import {
+  type PageSize,
   makeTestPdf,
   pageRotationsOf,
   pageSizesOf,
-  type PageSize,
 } from './helpers.js';
 
 const SIZES: PageSize[] = [
@@ -139,25 +139,25 @@ describe('rotatePages', () => {
   it('rejects a page number past the end of the document', async () => {
     await fixture();
 
-    await expect(
-      rotatePages(inputPath, 90, outputPath, [5])
-    ).rejects.toThrow(/out of range/);
+    await expect(rotatePages(inputPath, 90, outputPath, [5])).rejects.toThrow(
+      /out of range/
+    );
   });
 
   it('rejects a page number below one', async () => {
     await fixture();
 
-    await expect(
-      rotatePages(inputPath, 90, outputPath, [0])
-    ).rejects.toThrow(/1-based whole number/);
+    await expect(rotatePages(inputPath, 90, outputPath, [0])).rejects.toThrow(
+      /1-based whole number/
+    );
   });
 
   it('rejects a non-integer page number', async () => {
     await fixture();
 
-    await expect(
-      rotatePages(inputPath, 90, outputPath, [1.5])
-    ).rejects.toThrow(/1-based whole number/);
+    await expect(rotatePages(inputPath, 90, outputPath, [1.5])).rejects.toThrow(
+      /1-based whole number/
+    );
   });
 
   it('rejects an empty output path', async () => {

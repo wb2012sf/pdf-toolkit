@@ -1,9 +1,9 @@
-import { describe, it, expect, afterEach } from 'vitest';
 import { mkdtemp, readdir, rm, stat, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { afterEach, describe, expect, it } from 'vitest';
 import { splitPdf } from '../src/split.js';
-import { makeTestPdf, pageSizesOf, type PageSize } from './helpers.js';
+import { type PageSize, makeTestPdf, pageSizesOf } from './helpers.js';
 
 const SIZES: PageSize[] = [
   [200, 201],

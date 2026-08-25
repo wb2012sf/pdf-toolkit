@@ -1,9 +1,9 @@
-import { describe, it, expect, afterEach } from 'vitest';
 import { mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { afterEach, describe, expect, it } from 'vitest';
 import { reorderPages } from '../src/reorder.js';
-import { makeTestPdf, pageSizesOf, type PageSize } from './helpers.js';
+import { type PageSize, makeTestPdf, pageSizesOf } from './helpers.js';
 
 const SIZES: PageSize[] = [
   [200, 201],
@@ -140,8 +140,8 @@ describe('reorderPages', () => {
   it('rejects an empty output path', async () => {
     await fixture();
 
-    await expect(
-      reorderPages(inputPath, [1, 2, 3, 4, 5], '')
-    ).rejects.toThrow(/non-empty output path/);
+    await expect(reorderPages(inputPath, [1, 2, 3, 4, 5], '')).rejects.toThrow(
+      /non-empty output path/
+    );
   });
 });
