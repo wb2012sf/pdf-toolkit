@@ -1,0 +1,17 @@
+{
+  "name": "@pdf-toolkit/cli",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "bin": {
+    "pdf-toolkit": "dist/index.js"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "test": "vitest run --passWithNoTests"
+  },
+  "dependencies": {
+    "@pdf-toolkit/core": "*",
+    "commander": "^12.1.0"
+  }
+}
