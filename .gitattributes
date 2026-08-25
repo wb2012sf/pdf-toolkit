@@ -1,0 +1,9 @@
+# Normalize to LF in the repository and in the working tree on every
+# platform. Git is the sync path to Windows, and without this a commit made
+# there can land CRLF files that Biome then reports as formatting errors on
+# the Linux lint job.
+* text=auto eol=lf
+
+*.pdf binary
+*.png binary
+*.ico binary
