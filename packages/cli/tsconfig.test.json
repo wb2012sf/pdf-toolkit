@@ -1,0 +1,10 @@
+{
+  // Typecheck the tests and the vitest config without emitting them. The
+  // build config deliberately covers src only.
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "rootDir": "."
+  },
+  "include": ["src", "test", "vitest.config.ts"]
+}

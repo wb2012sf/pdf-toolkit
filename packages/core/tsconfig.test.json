@@ -1,0 +1,10 @@
+{
+  // Typecheck the tests without emitting them. The build config deliberately
+  // covers src only, so test files would otherwise never be checked.
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "rootDir": "."
+  },
+  "include": ["src", "test"]
+}
