@@ -97,10 +97,6 @@ typecheck, and GitHub Actions running build, test, lint, a CLI smoke check and
 audit on every push plus weekly.
 
 ## Known gaps
-- CI runs on Linux only. `--in-place` renames a file onto its own path, which
-  behaves differently on Windows when a file is held open. Worth proving on
-  `windows-latest` before relying on it from the Tauri side.
-- No LICENSE. The repo is private, so nothing forces the choice yet.
 - The CLI suite resolves core through a vitest alias to its TypeScript
   sources, so it never exercises the compiled binary. CI covers that with a
   separate smoke step; keep it if the workflow is ever rewritten.

@@ -185,3 +185,7 @@ npm run audit    # npm audit at moderate and above
 New operations are written test first: a stub that asserts its inputs and
 throws, a test that defines correct behaviour, then the implementation. See
 CLAUDE.md for the conventions in full.
+
+## Licence
+
+Apache License 2.0. See [LICENSE](LICENSE).
