@@ -15,7 +15,9 @@ and only touches the input when `--in-place` is passed.
 
 ## Requirements
 
-Node 24, pinned in `.nvmrc`. With nvm:
+Node 24, pinned in `.nvmrc`.
+
+### macOS and Linux
 
 ```bash
 nvm use          # reads .nvmrc
@@ -23,8 +25,48 @@ nvm use          # reads .nvmrc
 npm run build
 ```
 
-The binary is then at `packages/cli/dist/index.js`. Run it directly, or
-`npm link -w @pdf-toolkit/cli` to get `pdf-toolkit` on your PATH.
+### Windows
+
+Neither of the first two lines above works in PowerShell or cmd:
+`bootstrap.sh` is a bash script, and `nvm use` reading `.nvmrc` is a feature
+of nvm-sh, which is a different project from nvm-windows.
+
+You do not need either. `bootstrap.sh` creates directories and files that are
+already in the repository and then runs `npm install`, so on a fresh clone
+only that last step does anything:
+
+```powershell
+# nvm-windows does not read .nvmrc, so name the version
+nvm install 24.19.0
+nvm use 24.19.0
+
+npm install
+npm run build
+```
+
+If you prefer the POSIX instructions verbatim, both Git Bash (bundled with
+Git for Windows) and WSL run them unchanged:
+
+```bash
+bash bootstrap.sh
+npm run build
+```
+
+Everything after setup is an npm script and behaves the same on all three
+platforms. CI runs the build, the full test suite and a CLI smoke check on
+Windows as well as Linux.
+
+### Running it
+
+The binary is then at `packages/cli/dist/index.js`. Run it directly:
+
+```bash
+node packages/cli/dist/index.js merge a.pdf b.pdf -o out.pdf
+```
+
+Or `npm link -w @pdf-toolkit/cli` to get `pdf-toolkit` on your PATH. On
+Windows that creates a `pdf-toolkit.cmd` shim, so the command works the same
+from PowerShell.
 
 ## Commands
 
