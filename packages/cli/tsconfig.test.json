@@ -1,10 +1,17 @@
 {
-  // Typecheck the tests and the vitest config without emitting them. The
-  // build config deliberately covers src only.
-  "extends": "./tsconfig.json",
+  // Typecheck sources, tests and the vitest config without emitting.
+  // Extends the shared base rather than tsconfig.json, because that config
+  // sets rootDir for its build output and rootDir is enforced even when
+  // nothing is emitted, which rejects the engine's files below.
+  "extends": "../../tsconfig.base.json",
   "compilerOptions": {
     "noEmit": true,
-    "rootDir": "."
+    // Resolve the engine to its TypeScript sources, so a typecheck does not
+    // depend on packages/core having been built first.
+    "paths": {
+      "@pdf-toolkit/core": ["../core/src/index.ts"],
+      "@pdf-toolkit/core/bytes": ["../core/src/bytes/index.ts"]
+    }
   },
   "include": ["src", "test", "vitest.config.ts"]
 }

@@ -149,8 +149,12 @@ What is left for the desktop app, in order:
    works for anyone who prefers typing. Tauri v2 has a CLI plugin for
    parsing the arguments.
 
-The remaining six operations are not in the UI yet. Merge came first because
-it is the operation actually in daily use.
+All seven operations are in the UI, one tab each. Split returns a zip, since
+a page cannot write a folder; under Tauri that becomes a native folder picker
+and the fflate dependency can go.
+
+The page spec parser lives in `packages/core/src/bytes/pages.ts` so the CLI
+and the UI share it. `packages/cli/src/pages.ts` is only a re-export.
 
 The web app is now optional rather than a prerequisite: Tauri bundles the
 frontend files, it does not consume a deployed site, so the same UI can ship

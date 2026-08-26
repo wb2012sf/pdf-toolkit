@@ -1,9 +1,6 @@
 {
-  // Typecheck the tests and the vite config without emitting them.
+  // Typecheck sources, tests and the vite config. No rootDir: it is enforced
+  // even with noEmit, and the engine's sources sit outside this package.
   "extends": "./tsconfig.json",
-  "compilerOptions": {
-    "noEmit": true,
-    "rootDir": "."
-  },
   "include": ["src", "test", "vite.config.ts"]
 }

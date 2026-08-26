@@ -1,10 +1,13 @@
 {
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
-    "rootDir": "src",
-    "outDir": "dist-types",
+    // Vite does the bundling, so this config only ever typechecks.
     "noEmit": true,
-    "lib": ["ES2022", "DOM", "DOM.Iterable"]
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    // Typecheck against the engine's sources, matching what vite bundles.
+    "paths": {
+      "@pdf-toolkit/core/bytes": ["../core/src/bytes/index.ts"]
+    }
   },
   "include": ["src"]
 }

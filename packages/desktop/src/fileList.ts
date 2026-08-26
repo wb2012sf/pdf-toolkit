@@ -63,12 +63,16 @@ export function sortByName(
   return direction === 'desc' ? sorted.reverse() : sorted;
 }
 
+/** A file name without its .pdf extension, whatever case that was in. */
+export function stemOf(name: string): string {
+  return name.replace(/\.pdf$/i, '');
+}
+
 /** A sensible default file name to save the merge under. */
 export function suggestOutputName(files: PickedFile[]): string {
   const first = files[0];
   if (first === undefined) {
     return 'merged.pdf';
   }
-  const stem = first.name.replace(/\.pdf$/i, '');
-  return `${stem}-merged.pdf`;
+  return `${stemOf(first.name)}-merged.pdf`;
 }

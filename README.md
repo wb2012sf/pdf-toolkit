@@ -372,8 +372,13 @@ is uploaded anywhere.
 npm run dev      # from the repo root, opens a dev server
 ```
 
-Drop PDFs on it or pick them, reorder with the arrows or the sort buttons,
-name the output, merge. Only merge is wired up so far.
+All seven operations are there, one tab each. Merge takes several files:
+drop them on the page or pick them, reorder with the arrows or the sort
+buttons, name the output, merge. The rest take one file plus the same page
+spec syntax the CLI uses, `1,3,5-7`.
+
+Split is the one that differs. A page cannot write a folder, so it hands back
+a single zip of the pages, named the same way the CLI names them.
 
 It is plain TypeScript with no UI framework: Vite is a dev dependency, so the
 shipped bundle contains the engine and nothing else.

@@ -2,6 +2,7 @@
 // runs unchanged in a browser or a Tauri webview. Import it as
 // `@pdf-toolkit/core/bytes` to keep node:fs out of a bundle entirely.
 export { mergePdfBytes } from './merge.js';
+export { parsePageSpec } from './pages.js';
 export { pageFileName, splitPdfBytes } from './split.js';
 export { deletePagesBytes } from './delete.js';
 export { insertPagesBytes } from './insert.js';

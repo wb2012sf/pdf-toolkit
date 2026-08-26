@@ -12,7 +12,8 @@
     "test": "tsc -p tsconfig.test.json && vitest run"
   },
   "dependencies": {
-    "@pdf-toolkit/core": "*"
+    "@pdf-toolkit/core": "*",
+    "fflate": "^0.8.3"
   },
   "devDependencies": {
     "vite": "^8.2.2"
