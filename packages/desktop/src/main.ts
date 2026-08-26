@@ -20,7 +20,7 @@ import {
   suggestOutputName,
 } from './fileList.js';
 import { describeSkipped, partitionPdfs } from './pdfFiles.js';
-import { saveBytes, saveZip, withExtension } from './save.js';
+import { PDF, ZIP, buildZip, saveBytes, withExtension } from './save.js';
 
 /**
  * DOM wiring.
@@ -279,9 +279,14 @@ mergeRun.addEventListener(
   () =>
     void run(mergeRun, async () => {
       const merged = await mergePdfBytes(files.map((file) => file.bytes));
-      const name = withExtension(mergeOutput.value, '.pdf');
-      saveBytes(merged, name);
-      return `Merged ${files.length} files into ${name}.`;
+      const written = await saveBytes(
+        merged,
+        withExtension(mergeOutput.value, '.pdf'),
+        PDF
+      );
+      return written === undefined
+        ? 'Save cancelled.'
+        : `Merged ${files.length} files into ${written}.`;
     })
 );
 
@@ -305,15 +310,20 @@ splitRun.addEventListener(
       const bytes = requireFile(splitFile, 'a PDF');
       const pages = await splitPdfBytes(bytes);
       const stem = stemOf(nameOf(splitFile, 'document'));
-      const name = withExtension(splitOutput.value, '.zip');
-      saveZip(
+      const zip = buildZip(
         pages.map((page, index) => ({
           name: pageFileName(stem, index + 1, pages.length),
           bytes: page,
-        })),
-        name
+        }))
       );
-      return `Split into ${pages.length} pages, saved as ${name}.`;
+      const written = await saveBytes(
+        zip,
+        withExtension(splitOutput.value, '.zip'),
+        ZIP
+      );
+      return written === undefined
+        ? 'Save cancelled.'
+        : `Split into ${pages.length} pages, saved as ${written}.`;
     })
 );
 
@@ -338,9 +348,14 @@ deleteRun.addEventListener(
       const bytes = requireFile(deleteFile, 'a PDF');
       const pages = parsePageSpec(deletePages.value, 'Pages to delete');
       const result = await deletePagesBytes(bytes, pages);
-      const name = withExtension(deleteOutput.value, '.pdf');
-      saveBytes(result, name);
-      return `Deleted ${pages.length} page(s), saved as ${name}.`;
+      const written = await saveBytes(
+        result,
+        withExtension(deleteOutput.value, '.pdf'),
+        PDF
+      );
+      return written === undefined
+        ? 'Save cancelled.'
+        : `Deleted ${pages.length} page(s), saved as ${written}.`;
     })
 );
 
@@ -373,9 +388,14 @@ insertRun.addEventListener(
       const source = requireFile(insertSource, 'a PDF to insert');
       const at = Number(insertAt.value);
       const result = await insertPagesBytes(base, source, at);
-      const name = withExtension(insertOutput.value, '.pdf');
-      saveBytes(result, name);
-      return `Inserted at page ${at}, saved as ${name}.`;
+      const written = await saveBytes(
+        result,
+        withExtension(insertOutput.value, '.pdf'),
+        PDF
+      );
+      return written === undefined
+        ? 'Save cancelled.'
+        : `Inserted at page ${at}, saved as ${written}.`;
     })
 );
 
@@ -402,9 +422,14 @@ reorderRun.addEventListener(
       const bytes = requireFile(reorderFile, 'a PDF');
       const order = parsePageSpec(reorderOrder.value, 'New order');
       const result = await reorderPagesBytes(bytes, order);
-      const name = withExtension(reorderOutput.value, '.pdf');
-      saveBytes(result, name);
-      return `Reordered ${order.length} pages, saved as ${name}.`;
+      const written = await saveBytes(
+        result,
+        withExtension(reorderOutput.value, '.pdf'),
+        PDF
+      );
+      return written === undefined
+        ? 'Save cancelled.'
+        : `Reordered ${order.length} pages, saved as ${written}.`;
     })
 );
 
@@ -433,11 +458,16 @@ rotateRun.addEventListener(
       const spec = rotatePagesField.value.trim();
       const pages = spec.length > 0 ? parsePageSpec(spec, 'Pages') : undefined;
       const result = await rotatePagesBytes(bytes, degrees, pages);
-      const name = withExtension(rotateOutput.value, '.pdf');
-      saveBytes(result, name);
+      const written = await saveBytes(
+        result,
+        withExtension(rotateOutput.value, '.pdf'),
+        PDF
+      );
       const scope =
         pages === undefined ? 'every page' : `${pages.length} page(s)`;
-      return `Rotated ${scope} by ${degrees}, saved as ${name}.`;
+      return written === undefined
+        ? 'Save cancelled.'
+        : `Rotated ${scope} by ${degrees}, saved as ${written}.`;
     })
 );
 
@@ -464,9 +494,14 @@ extractRun.addEventListener(
       const bytes = requireFile(extractFile, 'a PDF');
       const pages = parsePageSpec(extractPagesField.value, 'Pages');
       const result = await extractPagesBytes(bytes, pages);
-      const name = withExtension(extractOutput.value, '.pdf');
-      saveBytes(result, name);
-      return `Extracted ${pages.length} page(s), saved as ${name}.`;
+      const written = await saveBytes(
+        result,
+        withExtension(extractOutput.value, '.pdf'),
+        PDF
+      );
+      return written === undefined
+        ? 'Save cancelled.'
+        : `Extracted ${pages.length} page(s), saved as ${written}.`;
     })
 );
 

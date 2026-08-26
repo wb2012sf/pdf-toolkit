@@ -1,0 +1,56 @@
+name: Desktop build
+
+# Not on every push: a Rust build takes minutes and Windows runner minutes
+# bill at several times the Linux rate, which is a lot to pay for a docs
+# commit. Run it by hand when the desktop shell changes, and on a release tag.
+on:
+  workflow_dispatch:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: read
+
+jobs:
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      # The runner image ships a Rust toolchain, so there is nothing to
+      # install, but the crates and the compiled output are worth keeping.
+      - name: Cache cargo
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            packages/desktop/src-tauri/target
+          key: cargo-${{ runner.os }}-${{ hashFiles('packages/desktop/src-tauri/Cargo.toml') }}
+          restore-keys: cargo-${{ runner.os }}-
+
+      - name: Install
+        run: npm ci
+
+      - name: Report the toolchain
+        run: |
+          rustc --version
+          cargo --version
+
+      # Runs the frontend build first, per beforeBuildCommand in tauri.conf.
+      - name: Build the app
+        run: npm run tauri:build -w @pdf-toolkit/desktop
+
+      - name: Upload the installer
+        uses: actions/upload-artifact@v4
+        with:
+          name: pdf-toolkit-windows
+          path: |
+            packages/desktop/src-tauri/target/release/bundle/**/*.exe
+            packages/desktop/src-tauri/target/release/bundle/**/*.msi
+          if-no-files-found: error

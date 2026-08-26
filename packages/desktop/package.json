@@ -9,13 +9,20 @@
     "build": "tsc -p tsconfig.json && vite build",
     "preview": "vite preview",
     "typecheck": "tsc -p tsconfig.test.json",
-    "test": "tsc -p tsconfig.test.json && vitest run"
+    "test": "tsc -p tsconfig.test.json && vitest run",
+    "tauri": "tauri",
+    "tauri:dev": "tauri dev",
+    "tauri:build": "tauri build"
   },
   "dependencies": {
     "@pdf-toolkit/core": "*",
+    "@tauri-apps/api": "^2.11.1",
+    "@tauri-apps/plugin-dialog": "^2.7.2",
+    "@tauri-apps/plugin-fs": "^2.5.1",
     "fflate": "^0.8.3"
   },
   "devDependencies": {
+    "@tauri-apps/cli": "^2.11.4",
     "vite": "^8.2.2"
   }
 }

@@ -1,6 +1,6 @@
-import { unzipSync, zipSync } from 'fflate';
+import { unzipSync } from 'fflate';
 import { describe, expect, it } from 'vitest';
-import { withExtension } from '../src/save.js';
+import { buildZip, withExtension } from '../src/save.js';
 
 describe('withExtension', () => {
   it('adds the extension when it is missing', () => {
@@ -28,21 +28,33 @@ describe('withExtension', () => {
   });
 });
 
-describe('the zip split produces', () => {
+describe('buildZip', () => {
   it('round trips its entries', () => {
-    // saveZip itself touches the DOM, but the archive it builds is what
-    // matters and fflate is deterministic, so check that shape directly.
-    const entries: Record<string, Uint8Array> = {
-      'doc-page-001.pdf': new Uint8Array([1, 2, 3]),
-      'doc-page-002.pdf': new Uint8Array([4, 5]),
-    };
+    // Delivery needs a DOM or the desktop shell, but the archive itself is
+    // pure, so it is built separately and checked here.
+    const zip = buildZip([
+      { name: 'doc-page-001.pdf', bytes: new Uint8Array([1, 2, 3]) },
+      { name: 'doc-page-002.pdf', bytes: new Uint8Array([4, 5]) },
+    ]);
 
-    const unzipped = unzipSync(zipSync(entries, { level: 0 }));
+    const unzipped = unzipSync(zip);
 
     expect(Object.keys(unzipped).sort()).toEqual([
       'doc-page-001.pdf',
       'doc-page-002.pdf',
     ]);
     expect(unzipped['doc-page-001.pdf']).toEqual(new Uint8Array([1, 2, 3]));
+  });
+
+  it('keeps the names the CLI would use', () => {
+    const zip = buildZip([
+      { name: 'scan-page-001.pdf', bytes: new Uint8Array([1]) },
+    ]);
+
+    expect(Object.keys(unzipSync(zip))).toEqual(['scan-page-001.pdf']);
+  });
+
+  it('handles an empty list', () => {
+    expect(Object.keys(unzipSync(buildZip([])))).toEqual([]);
   });
 });
