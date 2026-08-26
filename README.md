@@ -124,15 +124,42 @@ Windows as well as Linux.
 
 ### 4. Run it
 
-The binary is at `packages/cli/dist/index.js`:
+There are three ways to invoke it and they all run the same program, so pick
+whichever suits you. Every one of them needs `npm run build` to have run,
+because they all end up at `packages/cli/dist/index.js`.
+
+**a. From inside the repository, nothing to set up.** `npm install` already
+created the shortcut:
 
 ```bash
-node packages/cli/dist/index.js merge a.pdf b.pdf -o out.pdf
+npx pdf-toolkit merge a.pdf b.pdf -o out.pdf
 ```
 
-Or `npm link -w @pdf-toolkit/cli` to get `pdf-toolkit` on your PATH. On
-Windows that creates a `pdf-toolkit.cmd` shim, so the command works the same
-from PowerShell.
+This only works from the repository directory or a subdirectory of it. Run it
+from elsewhere and npx goes looking for a published package instead, failing
+with *"could not determine executable to run"*.
+
+**b. By explicit path, from anywhere**, with no shortcut involved:
+
+```bash
+node /path/to/pdf-toolkit/packages/cli/dist/index.js merge a.pdf b.pdf -o out.pdf
+```
+
+**c. As a normal command anywhere on the machine.** One time setup, run from
+the repository:
+
+```bash
+npm link -w @pdf-toolkit/cli
+```
+
+after which `pdf-toolkit` works from any directory:
+
+```bash
+pdf-toolkit merge a.pdf b.pdf -o out.pdf
+```
+
+On Windows this creates a `pdf-toolkit.cmd` shim, so it behaves the same in
+PowerShell. Undo it with `npm unlink -g @pdf-toolkit/cli`.
 
 ### Troubleshooting setup
 
@@ -179,6 +206,10 @@ The repository is private. Use an SSH key on that machine, or `gh auth login`
 followed by `gh repo clone wb2012sf/pdf-toolkit`.
 
 ## Commands
+
+Everything below is written as `pdf-toolkit`, which is form **c** from step 4.
+If you have not linked, substitute one of the others, for example
+`npx pdf-toolkit merge ...` from inside the repository.
 
 ```bash
 pdf-toolkit merge   <inputs...>      -o <file>
