@@ -25,7 +25,7 @@ jobs:
       # The runner image ships a Rust toolchain, so there is nothing to
       # install, but the crates and the compiled output are worth keeping.
       - name: Cache cargo
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: |
             ~/.cargo/registry
@@ -47,7 +47,7 @@ jobs:
         run: npm run tauri:build -w @pdf-toolkit/desktop
 
       - name: Upload the installer
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: pdf-toolkit-windows
           path: |
