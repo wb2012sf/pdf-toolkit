@@ -212,7 +212,7 @@ If you have not linked, substitute one of the others, for example
 `npx pdf-toolkit merge ...` from inside the repository.
 
 ```bash
-pdf-toolkit merge   <inputs...>      -o <file>
+pdf-toolkit merge   <inputs...>      -o <file>  [--sort name|name-desc]
 pdf-toolkit split   <input>          -o <dir>
 pdf-toolkit delete  <input>          -p <pages>       [-o <file> | --in-place]
 pdf-toolkit insert  <base> <insert>  --at <page>      [-o <file> | --in-place]
@@ -224,12 +224,41 @@ pdf-toolkit extract <input>          -p <pages>       [-o <file> | --in-place]
 
 ### merge
 
-Appends whole documents in the order given, not in any order derived from the
-filesystem.
+Appends whole documents in the order given.
 
 ```bash
 pdf-toolkit merge cover.pdf body.pdf appendix.pdf -o book.pdf
 ```
+
+**Wildcards.** `merge` expands `*`, `?` and `[abc]` itself, which is what
+makes this work in PowerShell and cmd. Neither expands wildcards for the
+program, unlike a POSIX shell:
+
+```bash
+pdf-toolkit merge *.pdf -o book.pdf
+```
+
+Matching ignores case, so `*.pdf` also picks up `SCAN.PDF` on every platform.
+Patterns cover one directory: `**` is refused rather than quietly treated as
+`*`. A pattern that matches nothing is an error, not an empty merge.
+
+The destination is left out of the expansion, so running
+`merge *.pdf -o merged.pdf` twice in the same folder does not fold the first
+result into the second. Naming a file explicitly is different: it is taken at
+face value, and merging a file onto itself is refused.
+
+**Ordering.** Files listed by hand keep the order you typed. An expansion is
+sorted, since directory order means nothing. `--sort` sets it explicitly:
+
+```bash
+pdf-toolkit merge *.pdf --sort name      -o book.pdf   # ascending, the default
+pdf-toolkit merge *.pdf --sort name-desc -o book.pdf   # descending
+```
+
+Sorting is a plain string comparison on the file name, the same as a shell
+would give. That means **`scan10.pdf` sorts before `scan2.pdf`**, so pad
+numbered files (`scan02.pdf`) if you want numeric order. `split` already pads
+its output for this reason.
 
 ### split
 

@@ -10,6 +10,7 @@ import {
 } from '@pdf-toolkit/core';
 import { Command } from 'commander';
 import { writeResult } from './inPlace.js';
+import { type SortMode, resolveInputs } from './inputs.js';
 import { parsePageSpec } from './pages.js';
 
 interface OutputOptions {
@@ -52,11 +53,25 @@ export function buildProgram(): Command {
   program
     .command('merge')
     .description('merge PDFs into one, in the order given')
-    .argument('<inputs...>', 'PDF files to merge')
+    .argument('<inputs...>', 'PDF files to merge, wildcards allowed')
     .requiredOption('-o, --output <file>', 'write the merged PDF here')
-    .action(async (inputs: string[], options: { output: string }) => {
-      await mergePdfs(inputs, options.output);
-    });
+    .option(
+      '-s, --sort <mode>',
+      'order the inputs by file name: name or name-desc'
+    )
+    .action(
+      async (
+        inputs: string[],
+        options: { output: string; sort?: string | undefined }
+      ) => {
+        const files = await resolveInputs(
+          inputs,
+          options.sort as SortMode | undefined,
+          options.output
+        );
+        await mergePdfs(files, options.output);
+      }
+    );
 
   program
     .command('split')

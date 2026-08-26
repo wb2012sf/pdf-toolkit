@@ -97,6 +97,48 @@ describe('pdf-toolkit CLI', () => {
     expect(await pageSizesOf(outPath)).toEqual([...SIZES, [500, 501]]);
   });
 
+  it('expands a wildcard, which PowerShell does not do for us', async () => {
+    await fixture();
+    const merged = join(dir as string, 'merged.pdf');
+
+    await run('merge', join(dir as string, '*.pdf'), '--output', merged);
+
+    // doc.pdf then other.pdf, sorted by name.
+    expect(await pageSizesOf(merged)).toEqual([...SIZES, [500, 501]]);
+  });
+
+  it('reverses the inputs with --sort name-desc', async () => {
+    await fixture();
+    const merged = join(dir as string, 'merged.pdf');
+
+    await run(
+      'merge',
+      join(dir as string, '*.pdf'),
+      '--sort',
+      'name-desc',
+      '--output',
+      merged
+    );
+
+    expect(await pageSizesOf(merged)).toEqual([[500, 501], ...SIZES]);
+  });
+
+  it('rejects an unknown sort mode', async () => {
+    await fixture();
+
+    await expect(
+      run('merge', docPath, '--sort', 'size', '--output', outPath)
+    ).rejects.toThrow(/name or name-desc/);
+  });
+
+  it('reports a wildcard that matches nothing', async () => {
+    await fixture();
+
+    await expect(
+      run('merge', join(dir as string, '*.docx'), '--output', outPath)
+    ).rejects.toThrow(/matched no files/);
+  });
+
   it('splits into one file per page', async () => {
     await fixture();
     const outDir = join(dir as string, 'burst');
