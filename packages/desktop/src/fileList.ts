@@ -68,11 +68,14 @@ export function stemOf(name: string): string {
   return name.replace(/\.pdf$/i, '');
 }
 
-/** A sensible default file name to save the merge under. */
-export function suggestOutputName(files: PickedFile[]): string {
-  const first = files[0];
-  if (first === undefined) {
-    return 'merged.pdf';
-  }
-  return `${stemOf(first.name)}-merged.pdf`;
+/**
+ * The default file name to save a merge under.
+ *
+ * Deliberately not derived from the inputs. Naming it after the first file
+ * privileges an arbitrary one of several, and a name that changes as you add
+ * and remove files is harder to predict than one that does not. The save
+ * dialog is where the real choice happens.
+ */
+export function suggestOutputName(_files: PickedFile[]): string {
+  return 'merged.pdf';
 }

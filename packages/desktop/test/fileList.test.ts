@@ -103,15 +103,18 @@ describe('sortByName', () => {
 });
 
 describe('suggestOutputName', () => {
-  it('builds a name from the first file', () => {
-    expect(suggestOutputName(LIST)).toBe('b-merged.pdf');
+  // Deliberately not derived from the first file. With several inputs the
+  // "first" one is an arbitrary thing to name the result after, and a plain
+  // name is easier to predict.
+  it('is the same whatever the files are called', () => {
+    expect(suggestOutputName(LIST)).toBe('merged.pdf');
   });
 
-  it('drops a trailing extension of any case', () => {
-    expect(suggestOutputName([file('Report.PDF')])).toBe('Report-merged.pdf');
+  it('does not vary with a single file either', () => {
+    expect(suggestOutputName([file('Report.PDF')])).toBe('merged.pdf');
   });
 
-  it('falls back when the list is empty', () => {
+  it('is the same for an empty list', () => {
     expect(suggestOutputName([])).toBe('merged.pdf');
   });
 });
