@@ -232,9 +232,8 @@ machine. You probably do not need one:
 
 - To work on the interface, `npm run dev` runs the same screens in a browser
   with no Rust involved. Only the save differs.
-- To just use the app, download an installer the Desktop build workflow
-  already produced rather than compiling your own:
-  `gh run download --name pdf-toolkit-windows`.
+- To just use the app, download an installer from the releases page rather
+  than compiling your own.
 
 If you do want the native dev loop, install both, then reopen the shell:
 
@@ -451,12 +450,30 @@ Output lands in `packages/desktop/src-tauri/target/release/bundle/`. That
 directory is gitignored; a Rust target tree runs to gigabytes.
 
 You do not have to build it locally. The **Desktop build** workflow compiles
-it on a Windows runner and attaches the installer as an artifact. It is
-triggered by hand or by a `v*` tag rather than on every push, since Windows
-runner minutes are expensive:
+it on a Windows runner. It does not run on every push, since Windows runner
+minutes are expensive; there are two ways to start it.
+
+**To publish a version**, push a tag. The workflow builds and opens a draft
+release with the `.msi` and `-setup.exe` attached, which anyone can then
+download from the releases page with no sign in and no tooling:
+
+```bash
+git tag v0.1.0
+git push origin v0.1.0
+```
+
+The tag has to match the version in `src-tauri/tauri.conf.json` or the build
+stops, rather than publishing a `v0.2.0` release containing a 0.1.0
+installer. The release is a draft, so nothing is downloadable until you
+publish it in the web UI.
+
+**To test a build without releasing anything**, run it by hand. That uploads
+the installers as a workflow artifact instead, which expires after 90 days
+and needs the CLI to fetch:
 
 ```bash
 gh workflow run "Desktop build" --ref main
+gh run download --name pdf-toolkit-windows
 ```
 
 Saving differs between the two ways of running. In the native app a system

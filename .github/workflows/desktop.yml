@@ -2,7 +2,7 @@ name: Desktop build
 
 # Not on every push: a Rust build takes minutes and Windows runner minutes
 # bill at several times the Linux rate, which is a lot to pay for a docs
-# commit. Run it by hand when the desktop shell changes, and on a release tag.
+# commit. Run it by hand while developing, and on a version tag to publish.
 on:
   workflow_dispatch:
   push:
@@ -14,6 +14,10 @@ permissions:
 jobs:
   windows:
     runs-on: windows-latest
+    # A tag run publishes a release, so it needs to write to the repository.
+    # A manual run does not, and stays read only.
+    permissions:
+      contents: ${{ startsWith(github.ref, 'refs/tags/v') && 'write' || 'read' }}
     steps:
       - uses: actions/checkout@v5
 
@@ -42,10 +46,25 @@ jobs:
           rustc --version
           cargo --version
 
+      # The tag is the source of truth for the version, so fail early rather
+      # than publishing a v0.2.0 release containing a 0.1.0 installer.
+      - name: Check the tag matches the app version
+        if: startsWith(github.ref, 'refs/tags/v')
+        shell: bash
+        run: |
+          tagged="${GITHUB_REF_NAME#v}"
+          declared=$(node -p "require('./packages/desktop/src-tauri/tauri.conf.json').version")
+          echo "tag $tagged, tauri.conf.json $declared"
+          if [ "$tagged" != "$declared" ]; then
+            echo "::error::tag $GITHUB_REF_NAME does not match version $declared"
+            exit 1
+          fi
+
       # Runs the frontend build first, per beforeBuildCommand in tauri.conf.
       - name: Build the app
         run: npm run tauri:build -w @pdf-toolkit/desktop
 
+      # Kept for manual runs, where there is no release to attach them to.
       - name: Upload the installer
         uses: actions/upload-artifact@v7
         with:
@@ -54,3 +73,29 @@ jobs:
             packages/desktop/src-tauri/target/release/bundle/**/*.exe
             packages/desktop/src-tauri/target/release/bundle/**/*.msi
           if-no-files-found: error
+
+      # On a tag, publish instead: a permanent download link that needs no
+      # sign in and no gh CLI on the other end, unlike an artifact.
+      #
+      # Uses the gh CLI, which the runner image already has, rather than a
+      # third party release action. One less thing to trust in a workflow
+      # that has write access to the repository.
+      - name: Publish the release
+        if: startsWith(github.ref, 'refs/tags/v')
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          bundle=packages/desktop/src-tauri/target/release/bundle
+          msi=$(ls "$bundle"/msi/*.msi)
+          exe=$(ls "$bundle"/nsis/*-setup.exe)
+          echo "attaching:"
+          ls -la "$msi" "$exe"
+          # Draft, so the release can be read over before anyone can download
+          # it. Publishing is one click in the web UI.
+          gh release create "$GITHUB_REF_NAME" \
+            --draft \
+            --generate-notes \
+            --title "PDF Toolkit $GITHUB_REF_NAME" \
+            "$msi" "$exe"
