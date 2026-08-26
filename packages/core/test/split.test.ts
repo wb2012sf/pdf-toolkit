@@ -2,8 +2,14 @@ import { mkdtemp, readdir, rm, stat, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
+import { pageFileName, splitPdfBytes } from '../src/bytes/split.js';
 import { splitPdf } from '../src/split.js';
-import { type PageSize, makeTestPdf, pageSizesOf } from './helpers.js';
+import {
+  type PageSize,
+  makeTestPdf,
+  pageSizesOf,
+  pageSizesOfBytes,
+} from './helpers.js';
 
 const SIZES: PageSize[] = [
   [200, 201],
@@ -12,6 +18,46 @@ const SIZES: PageSize[] = [
   [206, 207],
   [208, 209],
 ];
+
+describe('splitPdfBytes', () => {
+  it('returns one single-page document per source page, in order', async () => {
+    const pages = await splitPdfBytes(await makeTestPdf(SIZES));
+
+    expect(pages).toHaveLength(SIZES.length);
+    for (const [index, size] of SIZES.entries()) {
+      expect(await pageSizesOfBytes(pages[index] as Uint8Array)).toEqual([
+        size,
+      ]);
+    }
+  });
+
+  it('handles a single-page document', async () => {
+    const pages = await splitPdfBytes(await makeTestPdf([[300, 301]]));
+
+    expect(pages).toHaveLength(1);
+  });
+
+  it('rejects something that is not a Uint8Array', async () => {
+    await expect(
+      splitPdfBytes('not bytes' as unknown as Uint8Array)
+    ).rejects.toThrow(/Uint8Array/);
+  });
+});
+
+describe('pageFileName', () => {
+  it('pads to three digits by default', () => {
+    expect(pageFileName('doc', 7, 20)).toBe('doc-page-007.pdf');
+  });
+
+  it('widens when the document needs more digits', () => {
+    // Otherwise page-1000 would sort before page-999.
+    expect(pageFileName('doc', 7, 1200)).toBe('doc-page-0007.pdf');
+  });
+
+  it('rejects an empty stem', () => {
+    expect(() => pageFileName('', 1, 1)).toThrow(/non-empty stem/);
+  });
+});
 
 describe('splitPdf', () => {
   let dir: string | undefined;

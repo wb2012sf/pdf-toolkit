@@ -2,8 +2,14 @@ import { mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
+import { mergePdfBytes } from '../src/bytes/merge.js';
 import { mergePdfs } from '../src/merge.js';
-import { type PageSize, makeTestPdf, pageSizesOf } from './helpers.js';
+import {
+  type PageSize,
+  makeTestPdf,
+  pageSizesOf,
+  pageSizesOfBytes,
+} from './helpers.js';
 
 // Distinct page sizes act as identity tags, so the merged document proves
 // which source each page came from and in what order.
@@ -16,6 +22,43 @@ const B_SIZES: PageSize[] = [
   [302, 303],
   [304, 305],
 ];
+
+describe('mergePdfBytes', () => {
+  it('combines pages from several documents in order', async () => {
+    const merged = await mergePdfBytes([
+      await makeTestPdf(A_SIZES),
+      await makeTestPdf(B_SIZES),
+    ]);
+
+    expect(await pageSizesOfBytes(merged)).toEqual([...A_SIZES, ...B_SIZES]);
+  });
+
+  it('follows the order it is given', async () => {
+    const merged = await mergePdfBytes([
+      await makeTestPdf(B_SIZES),
+      await makeTestPdf(A_SIZES),
+    ]);
+
+    expect(await pageSizesOfBytes(merged)).toEqual([...B_SIZES, ...A_SIZES]);
+  });
+
+  it('accepts a single document', async () => {
+    const merged = await mergePdfBytes([await makeTestPdf(A_SIZES)]);
+
+    expect(await pageSizesOfBytes(merged)).toEqual(A_SIZES);
+  });
+
+  it('touches no filesystem, so it runs in a browser', async () => {
+    // The whole point of this layer: bytes in, bytes out, nothing else.
+    const merged = await mergePdfBytes([await makeTestPdf(A_SIZES)]);
+
+    expect(merged).toBeInstanceOf(Uint8Array);
+  });
+
+  it('rejects an empty list', async () => {
+    await expect(mergePdfBytes([])).rejects.toThrow(/at least one document/);
+  });
+});
 
 describe('mergePdfs', () => {
   let dir: string | undefined;

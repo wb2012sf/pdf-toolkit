@@ -2,11 +2,13 @@ import { mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
+import { rotatePagesBytes } from '../src/bytes/rotate.js';
 import { rotatePages } from '../src/rotate.js';
 import {
   type PageSize,
   makeTestPdf,
   pageRotationsOf,
+  pageRotationsOfBytes,
   pageSizesOf,
 } from './helpers.js';
 
@@ -16,6 +18,39 @@ const SIZES: PageSize[] = [
   [204, 205],
   [206, 207],
 ];
+
+describe('rotatePagesBytes', () => {
+  it('rotates every page when no selection is given', async () => {
+    const result = await rotatePagesBytes(await makeTestPdf(SIZES), 90);
+
+    expect(await pageRotationsOfBytes(result)).toEqual([90, 90, 90, 90]);
+  });
+
+  it('rotates only the named pages', async () => {
+    const result = await rotatePagesBytes(await makeTestPdf(SIZES), 90, [2, 4]);
+
+    expect(await pageRotationsOfBytes(result)).toEqual([0, 90, 0, 90]);
+  });
+
+  it('normalizes a negative rotation', async () => {
+    const result = await rotatePagesBytes(await makeTestPdf(SIZES), -90);
+
+    expect(await pageRotationsOfBytes(result)).toEqual([270, 270, 270, 270]);
+  });
+
+  it('adds to an existing rotation', async () => {
+    const once = await rotatePagesBytes(await makeTestPdf(SIZES), 90);
+    const twice = await rotatePagesBytes(once, 90);
+
+    expect(await pageRotationsOfBytes(twice)).toEqual([180, 180, 180, 180]);
+  });
+
+  it('rejects a rotation that is not a multiple of 90', async () => {
+    await expect(
+      rotatePagesBytes(await makeTestPdf(SIZES), 45)
+    ).rejects.toThrow(/multiple of 90/);
+  });
+});
 
 describe('rotatePages', () => {
   let dir: string | undefined;

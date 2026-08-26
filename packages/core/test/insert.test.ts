@@ -2,12 +2,14 @@ import { mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
+import { insertPagesBytes } from '../src/bytes/insert.js';
 import { insertPages } from '../src/insert.js';
 import {
   type PageSize,
   emptyPagePdf,
   makeTestPdf,
   pageSizesOf,
+  pageSizesOfBytes,
 } from './helpers.js';
 
 const BASE: PageSize[] = [
@@ -20,6 +22,61 @@ const INSERT: PageSize[] = [
   [500, 501],
   [502, 503],
 ];
+
+describe('insertPagesBytes', () => {
+  it('inserts at the given position', async () => {
+    const result = await insertPagesBytes(
+      await makeTestPdf(BASE),
+      await makeTestPdf(INSERT),
+      3
+    );
+
+    expect(await pageSizesOfBytes(result)).toEqual([
+      BASE[0],
+      BASE[1],
+      INSERT[0],
+      INSERT[1],
+      BASE[2],
+      BASE[3],
+    ]);
+  });
+
+  it('prepends at position 1', async () => {
+    const result = await insertPagesBytes(
+      await makeTestPdf(BASE),
+      await makeTestPdf(INSERT),
+      1
+    );
+
+    expect(await pageSizesOfBytes(result)).toEqual([...INSERT, ...BASE]);
+  });
+
+  it('appends one past the last page', async () => {
+    const result = await insertPagesBytes(
+      await makeTestPdf(BASE),
+      await makeTestPdf(INSERT),
+      BASE.length + 1
+    );
+
+    expect(await pageSizesOfBytes(result)).toEqual([...BASE, ...INSERT]);
+  });
+
+  it('rejects a position past one after the last page', async () => {
+    await expect(
+      insertPagesBytes(
+        await makeTestPdf(BASE),
+        await makeTestPdf(INSERT),
+        BASE.length + 2
+      )
+    ).rejects.toThrow(/out of range/);
+  });
+
+  it('rejects a document with no pages to insert', async () => {
+    await expect(
+      insertPagesBytes(await makeTestPdf(BASE), emptyPagePdf(), 1)
+    ).rejects.toThrow(/no pages to insert/);
+  });
+});
 
 describe('insertPages', () => {
   let dir: string | undefined;

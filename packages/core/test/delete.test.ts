@@ -2,8 +2,14 @@ import { mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
+import { deletePagesBytes } from '../src/bytes/delete.js';
 import { deletePages } from '../src/delete.js';
-import { type PageSize, makeTestPdf, pageSizesOf } from './helpers.js';
+import {
+  type PageSize,
+  makeTestPdf,
+  pageSizesOf,
+  pageSizesOfBytes,
+} from './helpers.js';
 
 const SIZES: PageSize[] = [
   [200, 201],
@@ -12,6 +18,46 @@ const SIZES: PageSize[] = [
   [206, 207],
   [208, 209],
 ];
+
+describe('deletePagesBytes', () => {
+  it('removes the named pages and keeps the rest in order', async () => {
+    const result = await deletePagesBytes(await makeTestPdf(SIZES), [2, 4]);
+
+    expect(await pageSizesOfBytes(result)).toEqual([
+      SIZES[0],
+      SIZES[2],
+      SIZES[4],
+    ]);
+  });
+
+  it('ignores duplicates and accepts any order', async () => {
+    const result = await deletePagesBytes(await makeTestPdf(SIZES), [4, 2, 4]);
+
+    expect(await pageSizesOfBytes(result)).toEqual([
+      SIZES[0],
+      SIZES[2],
+      SIZES[4],
+    ]);
+  });
+
+  it('refuses to delete every page', async () => {
+    await expect(
+      deletePagesBytes(await makeTestPdf(SIZES), [1, 2, 3, 4, 5])
+    ).rejects.toThrow(/would delete every page/);
+  });
+
+  it('rejects a page past the end', async () => {
+    await expect(
+      deletePagesBytes(await makeTestPdf(SIZES), [6])
+    ).rejects.toThrow(/out of range/);
+  });
+
+  it('rejects a page below one', async () => {
+    await expect(
+      deletePagesBytes(await makeTestPdf(SIZES), [0])
+    ).rejects.toThrow(/1-based whole number/);
+  });
+});
 
 describe('deletePages', () => {
   let dir: string | undefined;

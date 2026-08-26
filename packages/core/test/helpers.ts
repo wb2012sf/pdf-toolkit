@@ -16,6 +16,14 @@ export async function makeTestPdf(sizes: PageSize[]): Promise<Uint8Array> {
   return doc.save();
 }
 
+/** Report each page's rotation in degrees for an in-memory PDF. */
+export async function pageRotationsOfBytes(
+  bytes: Uint8Array
+): Promise<number[]> {
+  const doc = await PDFDocument.load(bytes);
+  return doc.getPages().map((page) => page.getRotation().angle);
+}
+
 /** Read a PDF from disk and report each page's rotation in degrees. */
 export async function pageRotationsOf(path: string): Promise<number[]> {
   const doc = await PDFDocument.load(await readFile(path));
@@ -43,6 +51,19 @@ export function emptyPagePdf(): Uint8Array {
     '',
   ].join('\n');
   return new Uint8Array(Buffer.from(raw, 'latin1'));
+}
+
+/** Report the page sizes of an in-memory PDF, in page order. */
+export async function pageSizesOfBytes(bytes: Uint8Array): Promise<PageSize[]> {
+  const doc = await PDFDocument.load(bytes);
+  return doc
+    .getPages()
+    .map(
+      (page): PageSize => [
+        Math.round(page.getWidth()),
+        Math.round(page.getHeight()),
+      ]
+    );
 }
 
 /** Read a PDF from disk and report its page sizes in page order. */

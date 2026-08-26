@@ -2,8 +2,14 @@ import { mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
+import { reorderPagesBytes } from '../src/bytes/reorder.js';
 import { reorderPages } from '../src/reorder.js';
-import { type PageSize, makeTestPdf, pageSizesOf } from './helpers.js';
+import {
+  type PageSize,
+  makeTestPdf,
+  pageSizesOf,
+  pageSizesOfBytes,
+} from './helpers.js';
 
 const SIZES: PageSize[] = [
   [200, 201],
@@ -12,6 +18,35 @@ const SIZES: PageSize[] = [
   [206, 207],
   [208, 209],
 ];
+
+describe('reorderPagesBytes', () => {
+  it('rearranges into the given order', async () => {
+    const result = await reorderPagesBytes(
+      await makeTestPdf(SIZES),
+      [3, 1, 5, 2, 4]
+    );
+
+    expect(await pageSizesOfBytes(result)).toEqual([
+      SIZES[2],
+      SIZES[0],
+      SIZES[4],
+      SIZES[1],
+      SIZES[3],
+    ]);
+  });
+
+  it('rejects a repeated page', async () => {
+    await expect(
+      reorderPagesBytes(await makeTestPdf(SIZES), [1, 2, 2, 4, 5])
+    ).rejects.toThrow(/more than once/);
+  });
+
+  it('rejects an incomplete permutation', async () => {
+    await expect(
+      reorderPagesBytes(await makeTestPdf(SIZES), [1, 2, 3, 4])
+    ).rejects.toThrow(/every page exactly once/);
+  });
+});
 
 describe('reorderPages', () => {
   let dir: string | undefined;

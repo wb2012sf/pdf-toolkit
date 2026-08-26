@@ -2,8 +2,14 @@ import { mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
+import { extractPagesBytes } from '../src/bytes/extract.js';
 import { extractPages } from '../src/extract.js';
-import { type PageSize, makeTestPdf, pageSizesOf } from './helpers.js';
+import {
+  type PageSize,
+  makeTestPdf,
+  pageSizesOf,
+  pageSizesOfBytes,
+} from './helpers.js';
 
 const SIZES: PageSize[] = [
   [200, 201],
@@ -12,6 +18,34 @@ const SIZES: PageSize[] = [
   [206, 207],
   [208, 209],
 ];
+
+describe('extractPagesBytes', () => {
+  it('extracts in the order listed', async () => {
+    const result = await extractPagesBytes(await makeTestPdf(SIZES), [4, 1, 3]);
+
+    expect(await pageSizesOfBytes(result)).toEqual([
+      SIZES[3],
+      SIZES[0],
+      SIZES[2],
+    ]);
+  });
+
+  it('repeats a page listed twice', async () => {
+    const result = await extractPagesBytes(await makeTestPdf(SIZES), [2, 2, 5]);
+
+    expect(await pageSizesOfBytes(result)).toEqual([
+      SIZES[1],
+      SIZES[1],
+      SIZES[4],
+    ]);
+  });
+
+  it('rejects a page past the end', async () => {
+    await expect(
+      extractPagesBytes(await makeTestPdf(SIZES), [6])
+    ).rejects.toThrow(/out of range/);
+  });
+});
 
 describe('extractPages', () => {
   let dir: string | undefined;

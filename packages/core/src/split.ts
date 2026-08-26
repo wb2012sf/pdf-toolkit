@@ -1,7 +1,7 @@
 import assert from 'node:assert';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { join, parse } from 'node:path';
-import { PDFDocument } from 'pdf-lib';
+import { pageFileName, splitPdfBytes } from './bytes/split.js';
 
 /**
  * Split a PDF into one single-page file per source page.
@@ -9,6 +9,9 @@ import { PDFDocument } from 'pdf-lib';
  * Output files are named after the input's stem, `<stem>-page-<n>.pdf`, with
  * the page number zero padded so a plain lexical sort matches page order. The
  * input is only read, never written. Returns the written paths in page order.
+ *
+ * This is the filesystem wrapper. The work is in splitPdfBytes, which has no
+ * filesystem dependency and so also runs in a browser or a Tauri webview.
  */
 export async function splitPdf(
   inputPath: string,
@@ -23,30 +26,18 @@ export async function splitPdf(
     'splitPdf requires a non-empty output directory'
   );
 
-  const source = await PDFDocument.load(await readFile(inputPath));
-  const pageCount = source.getPageCount();
-  assert(
-    pageCount > 0,
-    `splitPdf requires a PDF with at least one page: ${inputPath}`
-  );
+  const pages = await splitPdfBytes(await readFile(inputPath));
 
   await mkdir(outputDir, { recursive: true });
 
   const stem = parse(inputPath).name;
-  // Widen past three digits only when the document needs it, so a lexical
-  // sort still matches page order for documents over 999 pages.
-  const digits = Math.max(3, String(pageCount).length);
   const written: string[] = [];
-
-  for (let index = 0; index < pageCount; index++) {
-    const single = await PDFDocument.create();
-    const [page] = await single.copyPages(source, [index]);
-    assert(page, `splitPdf could not copy page ${index + 1} of ${inputPath}`);
-    single.addPage(page);
-
-    const pageNumber = String(index + 1).padStart(digits, '0');
-    const outputPath = join(outputDir, `${stem}-page-${pageNumber}.pdf`);
-    await writeFile(outputPath, await single.save());
+  for (const [index, page] of pages.entries()) {
+    const outputPath = join(
+      outputDir,
+      pageFileName(stem, index + 1, pages.length)
+    );
+    await writeFile(outputPath, page);
     written.push(outputPath);
   }
 

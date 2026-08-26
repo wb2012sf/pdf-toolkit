@@ -29,6 +29,11 @@ Do not add `qpdf` or any crypto-handling dependency during v1.
 - Validate all external input (file paths, page ranges, CLI flags) at the boundary
   with `assert` from `node:assert`. Fail loudly with a clear message. Don't let bad
   input reach pdf-lib silently.
+  - Exception: `packages/core/src/bytes/` uses its own `assert` from
+    `./assert.js`, same contract, no builtin. A bundler externalizes `node:`
+    imports for the browser, so `node:assert` there would break the page at
+    runtime. `test/bytes-purity.test.ts` fails if any `node:` import appears
+    in that directory.
 - TDD: write the failing vitest test before the implementation, for every function
   in `packages/core`.
 - Non-destructive by default: every command writes to a new output file unless
@@ -37,10 +42,17 @@ Do not add `qpdf` or any crypto-handling dependency during v1.
 
 ## Repo layout
 ```
-packages/core   pure functions wrapping pdf-lib, no CLI/IO concerns beyond
-                reading/writing file paths passed in as arguments
-packages/cli    thin commander wrapper, one subcommand per core function
+packages/core        the engine, in two layers
+packages/core/src/bytes   Uint8Array in, Uint8Array out. No filesystem, no
+                          node: imports, so it runs in a browser or a Tauri
+                          webview. Import as `@pdf-toolkit/core/bytes`.
+packages/core/src/*.ts    filesystem wrappers over that layer: validate path
+                          arguments, refuse to overwrite an input, read and
+                          write. Import as `@pdf-toolkit/core`.
+packages/cli         thin commander wrapper, one subcommand per operation
 ```
+Add an operation in the bytes layer and wrap it, never the other way round,
+and never a second copy of the logic for a front end.
 `package-lock.json` is the lockfile of record. Always commit it. Run
 `npm audit --audit-level=moderate` before any release.
 
@@ -105,30 +117,33 @@ audit on every push plus weekly.
 Not started, and explicitly out of scope for v1: the web app and the Tauri
 desktop app.
 
-### Core cannot be reused as it stands
-The plan was that both front ends would reuse `packages/core` unchanged. They
-cannot. Every operation takes file paths and imports `node:fs/promises`, so
-none of them run in a browser, and none run in a Tauri webview either, which
-is a browser and not Node. This is the decision that gates both phases, so
-settle it before writing any UI.
+### The bytes layer is done
+Core used to be filesystem only, which would have blocked both front ends: a
+Tauri webview is a browser, not Node. That is resolved. All seven operations
+now exist as `Uint8Array` in, `Uint8Array` out functions under
+`packages/core/src/bytes/`, with the original path based API kept as thin
+wrappers, so the CLI is unchanged and its tests never moved.
 
-Two ways out:
+A front end therefore needs no server, no upload, and no second copy of the
+logic:
 
-1. **Split core into a bytes layer.** Each operation becomes a pure
-   `Uint8Array` in, `Uint8Array` out function, with today's path based
-   signature kept as a thin fs wrapper that the CLI keeps calling. The 76
-   core tests stay meaningful, the CLI does not change, and the browser runs
-   pdf-lib directly: no server, no upload, PDFs never leave the machine, and
-   the web app deploys as static files. One refactor serves both the web app
-   and Tauri.
-2. **A Node server calling core as-is.** No core changes today, but it needs
-   upload and download, temp file lifecycle and cleanup, request size limits,
-   and a process running somewhere. PDFs travel over the network. Tauri would
-   still need option 1 later, so this defers the work rather than avoiding it.
+```ts
+import { mergePdfBytes, splitPdfBytes } from '@pdf-toolkit/core/bytes';
+```
 
-Option 1 is the recommendation. Do not write a second browser only copy of
-the operations: two implementations of the same seven operations will drift,
-which is the exact thing sharing an engine was meant to prevent.
+`pageFileName` is exported alongside them so a browser download names split
+pages exactly as the CLI does.
+
+What is left for the desktop app, in order:
+1. A UI against the bytes layer, plain files in and out to start with.
+2. The Tauri shell around it, producing the installer.
+3. Command line mode in the same binary, so `pdf-toolkit merge ...` still
+   works for anyone who prefers typing. Tauri v2 has a CLI plugin for
+   parsing the arguments.
+
+The web app is now optional rather than a prerequisite: Tauri bundles the
+frontend files, it does not consume a deployed site, so the same UI can ship
+as a desktop app first and be published as a page later if wanted.
 
 ### Tauri needs more than Node
 Building the Windows executable also needs the Rust toolchain, Microsoft C++

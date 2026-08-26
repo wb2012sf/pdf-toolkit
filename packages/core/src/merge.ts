@@ -1,13 +1,16 @@
 import assert from 'node:assert';
 import { readFile, writeFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
-import { PDFDocument } from 'pdf-lib';
+import { mergePdfBytes } from './bytes/merge.js';
 
 /**
  * Merge multiple PDFs into one, in the given order.
  *
  * Pages are appended in the order the input paths are given, not in any
  * order derived from the filesystem. The inputs are only read, never written.
+ *
+ * This is the filesystem wrapper. The work is in mergePdfBytes, which has no
+ * filesystem dependency and so also runs in a browser or a Tauri webview.
  */
 export async function mergePdfs(
   inputPaths: string[],
@@ -39,14 +42,10 @@ export async function mergePdfs(
     );
   }
 
-  const merged = await PDFDocument.create();
+  const inputs: Uint8Array[] = [];
   for (const inputPath of inputPaths) {
-    const source = await PDFDocument.load(await readFile(inputPath));
-    const copied = await merged.copyPages(source, source.getPageIndices());
-    for (const page of copied) {
-      merged.addPage(page);
-    }
+    inputs.push(await readFile(inputPath));
   }
 
-  await writeFile(outputPath, await merged.save());
+  await writeFile(outputPath, await mergePdfBytes(inputs));
 }
