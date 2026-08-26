@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>PDF Toolkit</title>
+    <link rel="stylesheet" href="./src/style.css" />
+  </head>
+  <body>
+    <main>
+      <header>
+        <h1>PDF Toolkit</h1>
+        <p class="tagline">Merge PDFs. Nothing leaves this machine.</p>
+      </header>
+
+      <section
+        id="dropzone"
+        class="dropzone"
+        aria-label="Add PDFs by dropping them here"
+      >
+        <p>Drop PDFs here</p>
+        <p class="or">or</p>
+        <button type="button" id="pick">Choose files</button>
+        <input
+          type="file"
+          id="picker"
+          accept="application/pdf,.pdf"
+          multiple
+          hidden
+        />
+      </section>
+
+      <section class="list-section">
+        <div class="list-header">
+          <h2>Files to merge</h2>
+          <div class="sorts">
+            <button type="button" id="sort-asc" disabled>Sort A to Z</button>
+            <button type="button" id="sort-desc" disabled>Sort Z to A</button>
+            <button type="button" id="clear" disabled>Clear</button>
+          </div>
+        </div>
+
+        <p id="empty" class="empty">No files yet. Pages merge in this order.</p>
+        <ol id="files" class="files"></ol>
+      </section>
+
+      <section class="actions">
+        <label for="output-name">Save as</label>
+        <input type="text" id="output-name" value="merged.pdf" />
+        <button type="button" id="merge" disabled>Merge</button>
+      </section>
+
+      <p id="status" class="status" role="status" aria-live="polite"></p>
+    </main>
+
+    <script type="module" src="./src/main.ts"></script>
+  </body>
+</html>

@@ -8,7 +8,8 @@
   },
   "workspaces": ["packages/*"],
   "scripts": {
-    "build": "npm run build -w @pdf-toolkit/core && npm run build -w @pdf-toolkit/cli",
+    "build": "npm run build -w @pdf-toolkit/core && npm run build -w @pdf-toolkit/cli && npm run build -w @pdf-toolkit/desktop",
+    "dev": "npm run dev -w @pdf-toolkit/desktop",
     "test": "npm run test --workspaces --if-present",
     "typecheck": "npm run typecheck --workspaces --if-present",
     "lint": "biome check .",

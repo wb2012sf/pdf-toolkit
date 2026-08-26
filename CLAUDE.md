@@ -50,6 +50,8 @@ packages/core/src/*.ts    filesystem wrappers over that layer: validate path
                           arguments, refuse to overwrite an input, read and
                           write. Import as `@pdf-toolkit/core`.
 packages/cli         thin commander wrapper, one subcommand per operation
+packages/desktop     Vite plus vanilla TypeScript, no UI framework. Talks to
+                     the bytes layer only. Becomes the Tauri frontend.
 ```
 Add an operation in the bytes layer and wrap it, never the other way round,
 and never a second copy of the logic for a front end.
@@ -135,11 +137,20 @@ import { mergePdfBytes, splitPdfBytes } from '@pdf-toolkit/core/bytes';
 pages exactly as the CLI does.
 
 What is left for the desktop app, in order:
-1. A UI against the bytes layer, plain files in and out to start with.
-2. The Tauri shell around it, producing the installer.
+1. ~~A UI against the bytes layer.~~ Done: `packages/desktop` is a merge
+   screen, `npm run dev` to work on it. Vanilla TypeScript deliberately, so
+   the shipped bundle carries no framework; ordering logic lives in
+   `src/fileList.ts` where it is tested without a browser, and `src/main.ts`
+   is glue.
+2. The Tauri shell around it, producing the installer. `src/main.ts` has one
+   function, `save`, that does a blob download; that is the piece that
+   becomes the native save dialog.
 3. Command line mode in the same binary, so `pdf-toolkit merge ...` still
    works for anyone who prefers typing. Tauri v2 has a CLI plugin for
    parsing the arguments.
+
+The remaining six operations are not in the UI yet. Merge came first because
+it is the operation actually in daily use.
 
 The web app is now optional rather than a prerequisite: Tauri bundles the
 frontend files, it does not consume a deployed site, so the same UI can ship

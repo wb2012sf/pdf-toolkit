@@ -362,10 +362,27 @@ temporary file is removed and the input is left untouched.
 `merge` and `split` have no `--in-place`: merge has several inputs and no
 obvious one to overwrite, and split produces a directory of files.
 
+## Desktop app
+
+`packages/desktop` is a graphical merge screen, and the frontend the Tauri
+build will wrap into an installer. It runs the engine in the page, so nothing
+is uploaded anywhere.
+
+```bash
+npm run dev      # from the repo root, opens a dev server
+```
+
+Drop PDFs on it or pick them, reorder with the arrows or the sort buttons,
+name the output, merge. Only merge is wired up so far.
+
+It is plain TypeScript with no UI framework: Vite is a dev dependency, so the
+shipped bundle contains the engine and nothing else.
+
 ## Using the engine directly
 
-`packages/core` is plain functions over `pdf-lib` with no CLI concerns, and is
-what the planned web and desktop front ends will reuse.
+`packages/core` comes in two layers.
+
+**Paths**, for anything running under Node:
 
 ```ts
 import { extractPages, rotatePages } from '@pdf-toolkit/core';
@@ -374,9 +391,23 @@ await extractPages('book.pdf', [4, 1, 3], 'excerpt.pdf');
 await rotatePages('scan.pdf', 90, 'upright.pdf', [2, 4]);
 ```
 
-Every function validates its arguments and throws a clear `AssertionError`
-rather than letting bad input reach pdf-lib. None of them will write over
-their own input.
+**Bytes**, for anything running in a browser or a Tauri webview, where there
+is no filesystem:
+
+```ts
+import { extractPagesBytes, mergePdfBytes } from '@pdf-toolkit/core/bytes';
+
+const merged = await mergePdfBytes([first, second]); // Uint8Array in and out
+```
+
+The path functions are thin wrappers over the bytes ones, so both behave
+identically and there is only one implementation of each operation. The bytes
+subpath imports nothing from `node:`, which a test enforces, so bundling it
+for the browser pulls in no polyfills.
+
+Every function validates its arguments and throws with a clear message rather
+than letting bad input reach pdf-lib. None of the path functions will write
+over their own input.
 
 ## Not supported
 
