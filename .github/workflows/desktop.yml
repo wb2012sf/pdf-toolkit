@@ -14,10 +14,11 @@ permissions:
 jobs:
   windows:
     runs-on: windows-latest
-    # A tag run publishes a release, so it needs to write to the repository.
-    # A manual run does not, and stays read only.
+    # Needed by the publish step, which only runs on a tag. This cannot be
+    # made conditional: the permissions key is read before any expression
+    # context exists, so an ${{ }} here makes the whole workflow unparseable.
     permissions:
-      contents: ${{ startsWith(github.ref, 'refs/tags/v') && 'write' || 'read' }}
+      contents: write
     steps:
       - uses: actions/checkout@v5
 

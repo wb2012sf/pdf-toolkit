@@ -68,5 +68,22 @@ jobs:
       - name: Lint
         run: npm run lint
 
+      # Biome does not read YAML, and a workflow that fails to parse cannot
+      # report its own failure: it simply never runs. A conditional
+      # permissions block once left the desktop build unrunnable and nothing
+      # noticed until it was dispatched by hand.
+      #
+      # Pinned tarball rather than a third party action, so this stays a
+      # download of a known version rather than something that can change
+      # under the job.
+      - name: Lint workflows
+        env:
+          ACTIONLINT_VERSION: 1.7.12
+        run: |
+          curl -sSfL \
+            "https://github.com/rhysd/actionlint/releases/download/v${ACTIONLINT_VERSION}/actionlint_${ACTIONLINT_VERSION}_linux_amd64.tar.gz" \
+            | tar xz actionlint
+          ./actionlint -color
+
       - name: Audit
         run: npm run audit
