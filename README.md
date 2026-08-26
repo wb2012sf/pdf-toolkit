@@ -13,52 +13,80 @@ delete, reorder, rotate, extract.
 Nothing is overwritten unless you say so. Every command writes to a new file
 and only touches the input when `--in-place` is passed.
 
-## Requirements
+## Getting started
 
-Node 24, pinned in `.nvmrc`.
+### 1. Node 24
 
-### macOS and Linux
+Install the runtime first. This is a one time, machine wide step with nvm and
+has nothing to do with this repository, so run it from anywhere, before you
+have the code.
+
+**macOS and Linux** (nvm-sh reads the pinned version from `.nvmrc`):
 
 ```bash
-nvm use          # reads .nvmrc
+nvm install    # from inside the repo, or: nvm install 24
+nvm use
+```
+
+**Windows**, using nvm-windows, which is a different project from nvm-sh and
+does not read `.nvmrc`, so name the version:
+
+```powershell
+nvm install 24.19.0
+nvm use 24.19.0
+```
+
+`nvm use` on Windows writes a symlink under `C:\Program Files\nodejs`, so it
+needs an **elevated shell**. Run PowerShell as Administrator or it fails with
+a permissions error.
+
+### 2. Get the code
+
+```bash
+git clone git@github.com:wb2012sf/pdf-toolkit.git
+cd pdf-toolkit
+```
+
+While the repository is private that clone needs credentials: either an SSH
+key on the machine, or `gh auth login` and then
+`gh repo clone wb2012sf/pdf-toolkit`. Once it is public, HTTPS works with no
+setup at all:
+
+```bash
+git clone https://github.com/wb2012sf/pdf-toolkit.git
+```
+
+### 3. Install and build
+
+These read `package.json`, so run them from inside the repository.
+
+**macOS and Linux**:
+
+```bash
 ./bootstrap.sh   # installs dependencies
 npm run build
 ```
 
-### Windows
-
-Neither of the first two lines above works in PowerShell or cmd:
-`bootstrap.sh` is a bash script, and `nvm use` reading `.nvmrc` is a feature
-of nvm-sh, which is a different project from nvm-windows.
-
-You do not need either. `bootstrap.sh` creates directories and files that are
+**Windows**: `bootstrap.sh` is a bash script that PowerShell and cmd cannot
+run, and you do not need it. It creates directories and files that are
 already in the repository and then runs `npm install`, so on a fresh clone
 only that last step does anything:
 
 ```powershell
-# nvm-windows does not read .nvmrc, so name the version
-nvm install 24.19.0
-nvm use 24.19.0
-
 npm install
 npm run build
 ```
 
-If you prefer the POSIX instructions verbatim, both Git Bash (bundled with
-Git for Windows) and WSL run them unchanged:
-
-```bash
-bash bootstrap.sh
-npm run build
-```
+If you would rather use the POSIX instructions verbatim, Git Bash (bundled
+with Git for Windows) and WSL both run them unchanged.
 
 Everything after setup is an npm script and behaves the same on all three
 platforms. CI runs the build, the full test suite and a CLI smoke check on
 Windows as well as Linux.
 
-### Running it
+### 4. Run it
 
-The binary is then at `packages/cli/dist/index.js`. Run it directly:
+The binary is at `packages/cli/dist/index.js`:
 
 ```bash
 node packages/cli/dist/index.js merge a.pdf b.pdf -o out.pdf

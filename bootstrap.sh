@@ -18,6 +18,8 @@ fi
 npm install
 
 echo ""
-echo "Scaffold ready. package-lock.json was generated, commit it."
-echo "Next: point Claude Code at CLAUDE.md and start with a failing test"
-echo "in packages/core/test for the first operation (e.g. merge)."
+echo "Dependencies installed. Next:"
+echo "  npm run build    compile core, then the cli"
+echo "  npm test         typecheck and run the suite"
+echo ""
+echo "README.md covers usage, CLAUDE.md the conventions for changing this."
