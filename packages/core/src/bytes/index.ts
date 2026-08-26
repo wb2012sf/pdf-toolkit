@@ -1,6 +1,7 @@
 // The filesystem free layer. Everything here is bytes in, bytes out, so it
 // runs unchanged in a browser or a Tauri webview. Import it as
 // `@pdf-toolkit/core/bytes` to keep node:fs out of a bundle entirely.
+export { pageCountOf } from './inspect.js';
 export { mergePdfBytes } from './merge.js';
 export { parsePageSpec } from './pages.js';
 export { pageFileName, splitPdfBytes } from './split.js';

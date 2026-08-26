@@ -292,9 +292,9 @@ mergeRun.addEventListener(
 
 // --- split -----------------------------------------------------------------
 
-const splitFile = createFileDrop('split-zone', (_file, note) => {
+const splitFile = createFileDrop('split-zone', (_file, note, isError) => {
   suggestSplitFile();
-  say(note);
+  say(note, isError);
 });
 const splitOutput = element<HTMLInputElement>('split-output');
 const splitRun = element<HTMLButtonElement>('split-run');
@@ -329,9 +329,9 @@ splitRun.addEventListener(
 
 // --- delete ----------------------------------------------------------------
 
-const deleteFile = createFileDrop('delete-zone', (_file, note) => {
+const deleteFile = createFileDrop('delete-zone', (_file, note, isError) => {
   suggestDeleteFile();
-  say(note);
+  say(note, isError);
 });
 const deletePages = element<HTMLInputElement>('delete-pages');
 const deleteOutput = element<HTMLInputElement>('delete-output');
@@ -361,14 +361,20 @@ deleteRun.addEventListener(
 
 // --- insert ----------------------------------------------------------------
 
-const insertBase = createFileDrop('insert-base-zone', (_file, note) => {
-  suggestInsertBase();
-  say(note);
-});
-const insertSource = createFileDrop('insert-source-zone', (_file, note) => {
-  suggestInsertSource();
-  say(note);
-});
+const insertBase = createFileDrop(
+  'insert-base-zone',
+  (_file, note, isError) => {
+    suggestInsertBase();
+    say(note, isError);
+  }
+);
+const insertSource = createFileDrop(
+  'insert-source-zone',
+  (_file, note, isError) => {
+    suggestInsertSource();
+    say(note, isError);
+  }
+);
 const insertAt = element<HTMLInputElement>('insert-at');
 const insertOutput = element<HTMLInputElement>('insert-output');
 const insertRun = element<HTMLButtonElement>('insert-run');
@@ -401,9 +407,9 @@ insertRun.addEventListener(
 
 // --- reorder ---------------------------------------------------------------
 
-const reorderFile = createFileDrop('reorder-zone', (_file, note) => {
+const reorderFile = createFileDrop('reorder-zone', (_file, note, isError) => {
   suggestReorderFile();
-  say(note);
+  say(note, isError);
 });
 const reorderOrder = element<HTMLInputElement>('reorder-order');
 const reorderOutput = element<HTMLInputElement>('reorder-output');
@@ -435,9 +441,9 @@ reorderRun.addEventListener(
 
 // --- rotate ----------------------------------------------------------------
 
-const rotateFile = createFileDrop('rotate-zone', (_file, note) => {
+const rotateFile = createFileDrop('rotate-zone', (_file, note, isError) => {
   suggestRotateFile();
-  say(note);
+  say(note, isError);
 });
 const rotateDegrees = element<HTMLSelectElement>('rotate-degrees');
 const rotatePagesField = element<HTMLInputElement>('rotate-pages');
@@ -473,9 +479,9 @@ rotateRun.addEventListener(
 
 // --- extract ---------------------------------------------------------------
 
-const extractFile = createFileDrop('extract-zone', (_file, note) => {
+const extractFile = createFileDrop('extract-zone', (_file, note, isError) => {
   suggestExtractFile();
-  say(note);
+  say(note, isError);
 });
 const extractPagesField = element<HTMLInputElement>('extract-pages');
 const extractOutput = element<HTMLInputElement>('extract-output');

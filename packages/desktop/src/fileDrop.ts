@@ -1,3 +1,4 @@
+import { pageCountOf } from '@pdf-toolkit/core/bytes';
 import type { PickedFile } from './fileList.js';
 import { describeSkipped, partitionPdfs } from './pdfFiles.js';
 
@@ -11,6 +12,8 @@ import { describeSkipped, partitionPdfs } from './pdfFiles.js';
 export interface SingleFileDrop {
   /** The chosen file, or undefined if nothing has been chosen yet. */
   current(): PickedFile | undefined;
+  /** How many pages it has, once it has been read. */
+  pages(): number | undefined;
   /** Forget the current file and reset the zone. */
   clear(): void;
 }
@@ -18,7 +21,11 @@ export interface SingleFileDrop {
 /** Wire the zone with this id. The markup lives in index.html. */
 export function createFileDrop(
   zoneId: string,
-  onChange: (file: PickedFile | undefined, note: string) => void
+  onChange: (
+    file: PickedFile | undefined,
+    note: string,
+    isError?: boolean
+  ) => void
 ): SingleFileDrop {
   const found = document.getElementById(zoneId);
   if (found === null) {
@@ -43,9 +50,14 @@ export function createFileDrop(
   const chosen: HTMLElement = chosenEl;
 
   let picked: PickedFile | undefined;
+  let pageCount: number | undefined;
 
   function render(): void {
-    chosen.textContent = picked?.name ?? '';
+    const pages =
+      pageCount === undefined
+        ? ''
+        : ` — ${pageCount} ${pageCount === 1 ? 'page' : 'pages'}`;
+    chosen.textContent = picked === undefined ? '' : `${picked.name}${pages}`;
     chosen.hidden = picked === undefined;
     zone.classList.toggle('filled', picked !== undefined);
   }
@@ -59,10 +71,26 @@ export function createFileDrop(
       return;
     }
 
-    picked = {
-      name: first.name,
-      bytes: new Uint8Array(await first.arrayBuffer()),
-    };
+    const bytes = new Uint8Array(await first.arrayBuffer());
+
+    // Read the page count now rather than when an operation runs, so the
+    // valid range is visible before anyone types a page number into it. It
+    // doubles as a check that the file is a PDF the engine can actually
+    // open, which catches an encrypted one here instead of at the end.
+    let count: number;
+    try {
+      count = await pageCountOf(bytes);
+    } catch {
+      onChange(
+        picked,
+        `${first.name} could not be read. It may be damaged, or encrypted, which is not supported.`,
+        true
+      );
+      return;
+    }
+
+    picked = { name: first.name, bytes };
+    pageCount = count;
     render();
 
     const extra =
@@ -102,8 +130,10 @@ export function createFileDrop(
 
   return {
     current: () => picked,
+    pages: () => pageCount,
     clear: () => {
       picked = undefined;
+      pageCount = undefined;
       render();
     },
   };
