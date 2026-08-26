@@ -15,9 +15,11 @@ describe('the page and the script agree on element ids', () => {
     const script = await readFile(join(ROOT, 'src', 'main.ts'), 'utf8');
     const html = await readFile(join(ROOT, 'index.html'), 'utf8');
 
-    const wanted = [...script.matchAll(/element<[^>]+>\('([^']+)'\)/g)].map(
-      (match) => match[1] as string
-    );
+    const wanted = [
+      ...script.matchAll(/element<[^>]+>\('([^']+)'\)/g),
+      // Drop zones are looked up the same way, by id, inside createFileDrop.
+      ...script.matchAll(/createFileDrop\('([^']+)'/g),
+    ].map((match) => match[1] as string);
     expect(wanted.length).toBeGreaterThan(0);
 
     const present = new Set(
@@ -25,6 +27,35 @@ describe('the page and the script agree on element ids', () => {
     );
 
     expect(wanted.filter((id) => !present.has(id))).toEqual([]);
+  });
+
+  it('every drop zone has the parts createFileDrop expects', async () => {
+    // It looks for a file input, a button and a .chosen element inside the
+    // zone, and throws when any is missing.
+    const script = await readFile(join(ROOT, 'src', 'main.ts'), 'utf8');
+    const html = await readFile(join(ROOT, 'index.html'), 'utf8');
+
+    const zoneIds = [...script.matchAll(/createFileDrop\('([^']+)'/g)].map(
+      (match) => match[1] as string
+    );
+    expect(zoneIds.length).toBeGreaterThan(0);
+
+    const incomplete: string[] = [];
+    for (const id of zoneIds) {
+      const zone = html.match(
+        new RegExp(`<div[^>]*id="${id}"[\\s\\S]*?</div>`)
+      )?.[0];
+      if (zone === undefined) {
+        incomplete.push(`${id} is missing`);
+        continue;
+      }
+      if (!zone.includes('type="file"')) incomplete.push(`${id} has no input`);
+      if (!zone.includes('<button')) incomplete.push(`${id} has no button`);
+      if (!zone.includes('class="chosen"'))
+        incomplete.push(`${id} has no .chosen`);
+    }
+
+    expect(incomplete).toEqual([]);
   });
 
   it('the markup loads the script and the stylesheet', async () => {

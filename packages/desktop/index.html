@@ -27,7 +27,7 @@
       <section id="panel-merge" class="panel">
         <p class="what">Join documents end to end, in the order listed.</p>
 
-        <div id="dropzone" class="dropzone" aria-label="Add PDFs">
+        <div id="merge-zone" class="dropzone" aria-label="Add PDFs">
           <p>Drop PDFs here</p>
           <p class="or">or</p>
           <button type="button" id="pick">Choose files</button>
@@ -57,10 +57,13 @@
         <p class="what">
           Break a document into one file per page, delivered as a zip.
         </p>
-        <label class="field">
-          <span>PDF</span>
-          <input type="file" id="split-file" accept="application/pdf,.pdf" />
-        </label>
+        <div class="dropzone small" id="split-zone">
+          <p>Drop a PDF here</p>
+          <p class="or">or</p>
+          <button type="button">Choose file</button>
+          <p class="chosen" hidden></p>
+          <input type="file" accept="application/pdf,.pdf" hidden />
+        </div>
         <div class="actions">
           <label for="split-output">Save as</label>
           <input type="text" id="split-output" value="pages.zip" />
@@ -71,10 +74,13 @@
       <!-- Delete -->
       <section id="panel-delete" class="panel" hidden>
         <p class="what">Remove pages. The rest keep their order.</p>
-        <label class="field">
-          <span>PDF</span>
-          <input type="file" id="delete-file" accept="application/pdf,.pdf" />
-        </label>
+        <div class="dropzone small" id="delete-zone">
+          <p>Drop a PDF here</p>
+          <p class="or">or</p>
+          <button type="button">Choose file</button>
+          <p class="chosen" hidden></p>
+          <input type="file" accept="application/pdf,.pdf" hidden />
+        </div>
         <label class="field">
           <span>Pages to delete</span>
           <input type="text" id="delete-pages" placeholder="2,5-7" />
@@ -92,14 +98,20 @@
           Put every page of one document into another. Position 1 puts it in
           front.
         </p>
-        <label class="field">
-          <span>Base PDF</span>
-          <input type="file" id="insert-base" accept="application/pdf,.pdf" />
-        </label>
-        <label class="field">
-          <span>PDF to insert</span>
-          <input type="file" id="insert-source" accept="application/pdf,.pdf" />
-        </label>
+        <div class="dropzone small" id="insert-base-zone">
+          <p>Drop the base PDF here</p>
+          <p class="or">or</p>
+          <button type="button">Choose file</button>
+          <p class="chosen" hidden></p>
+          <input type="file" accept="application/pdf,.pdf" hidden />
+        </div>
+        <div class="dropzone small" id="insert-source-zone">
+          <p>Drop the PDF to insert here</p>
+          <p class="or">or</p>
+          <button type="button">Choose file</button>
+          <p class="chosen" hidden></p>
+          <input type="file" accept="application/pdf,.pdf" hidden />
+        </div>
         <label class="field">
           <span>At page</span>
           <input type="number" id="insert-at" value="1" min="1" step="1" />
@@ -116,10 +128,13 @@
         <p class="what">
           Rearrange pages. List every page exactly once, so nothing is lost.
         </p>
-        <label class="field">
-          <span>PDF</span>
-          <input type="file" id="reorder-file" accept="application/pdf,.pdf" />
-        </label>
+        <div class="dropzone small" id="reorder-zone">
+          <p>Drop a PDF here</p>
+          <p class="or">or</p>
+          <button type="button">Choose file</button>
+          <p class="chosen" hidden></p>
+          <input type="file" accept="application/pdf,.pdf" hidden />
+        </div>
         <label class="field">
           <span>New order</span>
           <input type="text" id="reorder-order" placeholder="3,1,2 or 10-1" />
@@ -136,10 +151,13 @@
         <p class="what">
           Turn pages by a multiple of 90. Added to any rotation already there.
         </p>
-        <label class="field">
-          <span>PDF</span>
-          <input type="file" id="rotate-file" accept="application/pdf,.pdf" />
-        </label>
+        <div class="dropzone small" id="rotate-zone">
+          <p>Drop a PDF here</p>
+          <p class="or">or</p>
+          <button type="button">Choose file</button>
+          <p class="chosen" hidden></p>
+          <input type="file" accept="application/pdf,.pdf" hidden />
+        </div>
         <label class="field">
           <span>Degrees</span>
           <select id="rotate-degrees">
@@ -164,10 +182,13 @@
         <p class="what">
           Pull pages into a new document, in the order you list them.
         </p>
-        <label class="field">
-          <span>PDF</span>
-          <input type="file" id="extract-file" accept="application/pdf,.pdf" />
-        </label>
+        <div class="dropzone small" id="extract-zone">
+          <p>Drop a PDF here</p>
+          <p class="or">or</p>
+          <button type="button">Choose file</button>
+          <p class="chosen" hidden></p>
+          <input type="file" accept="application/pdf,.pdf" hidden />
+        </div>
         <label class="field">
           <span>Pages</span>
           <input type="text" id="extract-pages" placeholder="4,1,3 or 2-5" />

@@ -9,6 +9,7 @@ import {
   rotatePagesBytes,
   splitPdfBytes,
 } from '@pdf-toolkit/core/bytes';
+import { type SingleFileDrop, createFileDrop } from './fileDrop.js';
 import {
   type PickedFile,
   moveDown,
@@ -18,6 +19,7 @@ import {
   stemOf,
   suggestOutputName,
 } from './fileList.js';
+import { describeSkipped, partitionPdfs } from './pdfFiles.js';
 import { saveBytes, saveZip, withExtension } from './save.js';
 
 /**
@@ -43,20 +45,17 @@ function say(message: string, isError = false): void {
   status.classList.toggle('error', isError);
 }
 
-/** Read a file input, failing with a message aimed at the person reading it. */
-async function requireFile(
-  input: HTMLInputElement,
-  what: string
-): Promise<Uint8Array> {
-  const file = input.files?.[0];
+/** Read a drop zone, failing with a message aimed at the person reading it. */
+function requireFile(drop: SingleFileDrop, what: string): Uint8Array {
+  const file = drop.current();
   if (file === undefined) {
     throw new Error(`Choose ${what} first.`);
   }
-  return new Uint8Array(await file.arrayBuffer());
+  return file.bytes;
 }
 
-function nameOf(input: HTMLInputElement, fallback: string): string {
-  return input.files?.[0]?.name ?? fallback;
+function nameOf(drop: SingleFileDrop, fallback: string): string {
+  return drop.current()?.name ?? fallback;
 }
 
 /**
@@ -112,7 +111,7 @@ tabs.addEventListener('click', (event) => {
 
 // --- merge -----------------------------------------------------------------
 
-const dropzone = element<HTMLElement>('dropzone');
+const dropzone = element<HTMLElement>('merge-zone');
 const picker = element<HTMLInputElement>('picker');
 const list = element<HTMLOListElement>('files');
 const emptyNote = element<HTMLParagraphElement>('empty');
@@ -198,14 +197,8 @@ function renderList(): void {
   clearButton.disabled = !hasFiles;
 }
 
-function isPdf(file: File): boolean {
-  return file.type === 'application/pdf' || /\.pdf$/i.test(file.name);
-}
-
 async function addFiles(incoming: FileList | File[]): Promise<void> {
-  const candidates = Array.from(incoming);
-  const pdfs = candidates.filter(isPdf);
-  const skipped = candidates.length - pdfs.length;
+  const { pdfs, skipped } = partitionPdfs(Array.from(incoming));
 
   if (pdfs.length === 0) {
     say(skipped > 0 ? 'Those are not PDFs, so nothing was added.' : '', true);
@@ -224,7 +217,7 @@ async function addFiles(incoming: FileList | File[]): Promise<void> {
   refreshSuggestedName();
   renderList();
 
-  const note = skipped > 0 ? `, skipped ${skipped} that were not PDFs` : '';
+  const note = describeSkipped(skipped);
   say(`Added ${added.length} file${added.length === 1 ? '' : 's'}${note}.`);
 }
 
@@ -294,19 +287,22 @@ mergeRun.addEventListener(
 
 // --- split -----------------------------------------------------------------
 
-const splitFile = element<HTMLInputElement>('split-file');
+const splitFile = createFileDrop('split-zone', (_file, note) => {
+  suggestSplitFile();
+  say(note);
+});
 const splitOutput = element<HTMLInputElement>('split-output');
 const splitRun = element<HTMLButtonElement>('split-run');
 
-splitFile.addEventListener('change', () => {
+function suggestSplitFile(): void {
   splitOutput.value = `${stemOf(nameOf(splitFile, 'pages'))}-pages.zip`;
-});
+}
 
 splitRun.addEventListener(
   'click',
   () =>
     void run(splitRun, async () => {
-      const bytes = await requireFile(splitFile, 'a PDF');
+      const bytes = requireFile(splitFile, 'a PDF');
       const pages = await splitPdfBytes(bytes);
       const stem = stemOf(nameOf(splitFile, 'document'));
       const name = withExtension(splitOutput.value, '.zip');
@@ -323,20 +319,23 @@ splitRun.addEventListener(
 
 // --- delete ----------------------------------------------------------------
 
-const deleteFile = element<HTMLInputElement>('delete-file');
+const deleteFile = createFileDrop('delete-zone', (_file, note) => {
+  suggestDeleteFile();
+  say(note);
+});
 const deletePages = element<HTMLInputElement>('delete-pages');
 const deleteOutput = element<HTMLInputElement>('delete-output');
 const deleteRun = element<HTMLButtonElement>('delete-run');
 
-deleteFile.addEventListener('change', () => {
+function suggestDeleteFile(): void {
   deleteOutput.value = `${stemOf(nameOf(deleteFile, 'document'))}-edited.pdf`;
-});
+}
 
 deleteRun.addEventListener(
   'click',
   () =>
     void run(deleteRun, async () => {
-      const bytes = await requireFile(deleteFile, 'a PDF');
+      const bytes = requireFile(deleteFile, 'a PDF');
       const pages = parsePageSpec(deletePages.value, 'Pages to delete');
       const result = await deletePagesBytes(bytes, pages);
       const name = withExtension(deleteOutput.value, '.pdf');
@@ -347,22 +346,31 @@ deleteRun.addEventListener(
 
 // --- insert ----------------------------------------------------------------
 
-const insertBase = element<HTMLInputElement>('insert-base');
-const insertSource = element<HTMLInputElement>('insert-source');
+const insertBase = createFileDrop('insert-base-zone', (_file, note) => {
+  suggestInsertBase();
+  say(note);
+});
+const insertSource = createFileDrop('insert-source-zone', (_file, note) => {
+  suggestInsertSource();
+  say(note);
+});
 const insertAt = element<HTMLInputElement>('insert-at');
 const insertOutput = element<HTMLInputElement>('insert-output');
 const insertRun = element<HTMLButtonElement>('insert-run');
 
-insertBase.addEventListener('change', () => {
+function suggestInsertBase(): void {
   insertOutput.value = `${stemOf(nameOf(insertBase, 'document'))}-inserted.pdf`;
-});
+}
+
+/** The inserted document does not affect the output name. */
+function suggestInsertSource(): void {}
 
 insertRun.addEventListener(
   'click',
   () =>
     void run(insertRun, async () => {
-      const base = await requireFile(insertBase, 'a base PDF');
-      const source = await requireFile(insertSource, 'a PDF to insert');
+      const base = requireFile(insertBase, 'a base PDF');
+      const source = requireFile(insertSource, 'a PDF to insert');
       const at = Number(insertAt.value);
       const result = await insertPagesBytes(base, source, at);
       const name = withExtension(insertOutput.value, '.pdf');
@@ -373,22 +381,25 @@ insertRun.addEventListener(
 
 // --- reorder ---------------------------------------------------------------
 
-const reorderFile = element<HTMLInputElement>('reorder-file');
+const reorderFile = createFileDrop('reorder-zone', (_file, note) => {
+  suggestReorderFile();
+  say(note);
+});
 const reorderOrder = element<HTMLInputElement>('reorder-order');
 const reorderOutput = element<HTMLInputElement>('reorder-output');
 const reorderRun = element<HTMLButtonElement>('reorder-run');
 
-reorderFile.addEventListener('change', () => {
+function suggestReorderFile(): void {
   reorderOutput.value = `${stemOf(
     nameOf(reorderFile, 'document')
   )}-reordered.pdf`;
-});
+}
 
 reorderRun.addEventListener(
   'click',
   () =>
     void run(reorderRun, async () => {
-      const bytes = await requireFile(reorderFile, 'a PDF');
+      const bytes = requireFile(reorderFile, 'a PDF');
       const order = parsePageSpec(reorderOrder.value, 'New order');
       const result = await reorderPagesBytes(bytes, order);
       const name = withExtension(reorderOutput.value, '.pdf');
@@ -399,21 +410,24 @@ reorderRun.addEventListener(
 
 // --- rotate ----------------------------------------------------------------
 
-const rotateFile = element<HTMLInputElement>('rotate-file');
+const rotateFile = createFileDrop('rotate-zone', (_file, note) => {
+  suggestRotateFile();
+  say(note);
+});
 const rotateDegrees = element<HTMLSelectElement>('rotate-degrees');
 const rotatePagesField = element<HTMLInputElement>('rotate-pages');
 const rotateOutput = element<HTMLInputElement>('rotate-output');
 const rotateRun = element<HTMLButtonElement>('rotate-run');
 
-rotateFile.addEventListener('change', () => {
+function suggestRotateFile(): void {
   rotateOutput.value = `${stemOf(nameOf(rotateFile, 'document'))}-rotated.pdf`;
-});
+}
 
 rotateRun.addEventListener(
   'click',
   () =>
     void run(rotateRun, async () => {
-      const bytes = await requireFile(rotateFile, 'a PDF');
+      const bytes = requireFile(rotateFile, 'a PDF');
       const degrees = Number(rotateDegrees.value);
       // Blank means every page, matching the CLI where --pages is optional.
       const spec = rotatePagesField.value.trim();
@@ -429,22 +443,25 @@ rotateRun.addEventListener(
 
 // --- extract ---------------------------------------------------------------
 
-const extractFile = element<HTMLInputElement>('extract-file');
+const extractFile = createFileDrop('extract-zone', (_file, note) => {
+  suggestExtractFile();
+  say(note);
+});
 const extractPagesField = element<HTMLInputElement>('extract-pages');
 const extractOutput = element<HTMLInputElement>('extract-output');
 const extractRun = element<HTMLButtonElement>('extract-run');
 
-extractFile.addEventListener('change', () => {
+function suggestExtractFile(): void {
   extractOutput.value = `${stemOf(
     nameOf(extractFile, 'document')
   )}-extract.pdf`;
-});
+}
 
 extractRun.addEventListener(
   'click',
   () =>
     void run(extractRun, async () => {
-      const bytes = await requireFile(extractFile, 'a PDF');
+      const bytes = requireFile(extractFile, 'a PDF');
       const pages = parsePageSpec(extractPagesField.value, 'Pages');
       const result = await extractPagesBytes(bytes, pages);
       const name = withExtension(extractOutput.value, '.pdf');

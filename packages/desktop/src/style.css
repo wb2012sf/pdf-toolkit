@@ -94,6 +94,21 @@ button:disabled {
   justify-items: center;
 }
 
+/* The single-file zones sit above a form, so they stay compact. */
+.dropzone.small {
+  padding: 1.1rem 1rem;
+}
+
+.dropzone.filled {
+  border-style: solid;
+}
+
+.chosen {
+  margin: 0.15rem 0 0;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
 .dropzone.over {
   border-color: var(--accent);
   background: color-mix(in srgb, var(--accent) 8%, var(--panel));
