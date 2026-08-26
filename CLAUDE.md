@@ -113,6 +113,16 @@ Beyond that list the repo also has Biome wired up, tests covered by the
 typecheck, and GitHub Actions running build, test, lint, a CLI smoke check and
 audit on every push plus weekly.
 
+## Desktop shell notes
+Things that only show up in the built app, never in `npm run dev`:
+- `dragDropEnabled: false` in `tauri.conf.json` is load bearing. With Tauri's
+  own drag and drop handling on, the webview swallows file drops before the
+  page sees them, so every drop zone silently does nothing while working fine
+  in a browser. `test/tauriConfig.test.ts` guards it, since strict JSON cannot
+  hold a comment saying so.
+- Saving is the only code path that differs between the app and the browser.
+  `src/save.ts` picks at runtime; nothing else knows.
+
 ## Known gaps
 - The CLI suite resolves core through a vitest alias to its TypeScript
   sources, so it never exercises the compiled binary. CI covers that with a
