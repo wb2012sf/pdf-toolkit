@@ -21,24 +21,43 @@ Install the runtime first. This is a one time, machine wide step with nvm and
 has nothing to do with this repository, so run it from anywhere, before you
 have the code.
 
-**macOS and Linux** (nvm-sh reads the pinned version from `.nvmrc`):
+**macOS and Linux.** nvm-sh reads the pinned version from `.nvmrc`. If you do
+not already have it, install it from <https://github.com/nvm-sh/nvm> and open
+a new shell first.
 
 ```bash
 nvm install    # from inside the repo, or: nvm install 24
 nvm use
 ```
 
-**Windows**, using nvm-windows, which is a different project from nvm-sh and
-does not read `.nvmrc`, so name the version:
+**Windows.** nvm is not part of Windows and does not come with Node, so
+`nvm install` fails with *"The term 'nvm' is not recognized"* until you
+install it. The Windows version is nvm-windows, a different project from the
+nvm used above:
+
+```powershell
+winget install CoreyButler.NVMforWindows
+```
+
+Or download `nvm-setup.exe` from
+<https://github.com/coreybutler/nvm-windows/releases/latest> and run it.
+
+**Then close the shell and open a new one.** The installer edits `PATH`, and
+an already open session will not see it. In a new Administrator PowerShell:
 
 ```powershell
 nvm install 24.19.0
 nvm use 24.19.0
 ```
 
-`nvm use` on Windows writes a symlink under `C:\Program Files\nodejs`, so it
-needs an **elevated shell**. Run PowerShell as Administrator or it fails with
-a permissions error.
+Name the full version: nvm-windows does not read `.nvmrc`. `nvm use` writes a
+symlink under `C:\Program Files\nodejs`, which is why the shell has to be
+elevated, otherwise it fails with a permissions error.
+
+If this machine only ever needs one version of Node, you can skip nvm
+altogether and install Node 24 with the Windows installer from
+<https://nodejs.org>. Confirm with `node -v` that you get a 24.x version;
+the project requires `>=24 <25`.
 
 ### 2. Get the code
 
