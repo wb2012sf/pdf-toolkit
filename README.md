@@ -81,18 +81,13 @@ the project requires `>=24 <25`.
 ### 2. Get the code
 
 ```bash
-git clone git@github.com:wb2012sf/pdf-toolkit.git
+git clone https://github.com/wb2012sf/pdf-toolkit.git
 cd pdf-toolkit
 ```
 
-While the repository is private that clone needs credentials: either an SSH
-key on the machine, or `gh auth login` and then
-`gh repo clone wb2012sf/pdf-toolkit`. Once it is public, HTTPS works with no
-setup at all:
-
-```bash
-git clone https://github.com/wb2012sf/pdf-toolkit.git
-```
+If that asks for credentials, the repository is not public to you, and the
+clone needs an SSH key on the machine or `gh auth login` followed by
+`gh repo clone wb2012sf/pdf-toolkit`.
 
 ### 3. Install and build
 
@@ -202,8 +197,9 @@ back. The project requires `>=24 <25` and will refuse to install otherwise.
 
 **`git clone` asks for credentials or fails with a permission error**
 
-The repository is private. Use an SSH key on that machine, or `gh auth login`
-followed by `gh repo clone wb2012sf/pdf-toolkit`.
+The repository is not public to you, so the clone needs to prove who you are.
+Use an SSH key on that machine, or `gh auth login` followed by
+`gh repo clone wb2012sf/pdf-toolkit`.
 
 ### Troubleshooting after a pull
 
