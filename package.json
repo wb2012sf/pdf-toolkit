@@ -16,7 +16,8 @@
     "format": "biome check --write .",
     "audit": "npm audit --audit-level=moderate",
     "tauri:dev": "npm run tauri:dev -w @pdf-toolkit/desktop",
-    "tauri:build": "npm run tauri:build -w @pdf-toolkit/desktop"
+    "tauri:build": "npm run tauri:build -w @pdf-toolkit/desktop",
+    "version:set": "node scripts/set-version.mjs"
   },
   "devDependencies": {
     "@biomejs/biome": "^1.9.0",

@@ -531,6 +531,37 @@ New operations are written test first: a stub that asserts its inputs and
 throws, a test that defines correct behaviour, then the implementation. See
 CLAUDE.md for the conventions in full.
 
+## Releasing
+
+The version is declared in six files: the four `package.json`s,
+`tauri.conf.json` and `Cargo.toml`. One command sets them all, and a test
+fails if they ever disagree.
+
+```bash
+npm run version:set 0.2.0
+npm test
+git commit -am "chore: 0.2.0"
+git tag v0.2.0
+git push origin main v0.2.0
+```
+
+Order matters: a tag points at a commit, so the version has to be committed
+before it is tagged. The Desktop build workflow refuses to build when the tag
+and `tauri.conf.json` disagree, rather than publishing a `v0.2.0` release
+containing a `0.1.0` installer. It opens the release as a draft, so nothing
+is downloadable until you publish it.
+
+What the numbers mean, for an application rather than a library:
+
+| bump | for |
+|---|---|
+| patch, `0.1.1` | fixes, nothing new |
+| minor, `0.2.0` | a new capability |
+| major, `1.0.0` | when it is done rather than in progress |
+
+Nothing here is published to npm, so semver is a description of what changed
+rather than a promise to anyone's build.
+
 ## Licence
 
 Apache License 2.0. See [LICENSE](LICENSE).
