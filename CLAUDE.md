@@ -103,4 +103,35 @@ audit on every push plus weekly.
 
 ## Next up
 Not started, and explicitly out of scope for v1: the web app and the Tauri
-desktop app, both reusing `packages/core` unchanged.
+desktop app.
+
+### Core cannot be reused as it stands
+The plan was that both front ends would reuse `packages/core` unchanged. They
+cannot. Every operation takes file paths and imports `node:fs/promises`, so
+none of them run in a browser, and none run in a Tauri webview either, which
+is a browser and not Node. This is the decision that gates both phases, so
+settle it before writing any UI.
+
+Two ways out:
+
+1. **Split core into a bytes layer.** Each operation becomes a pure
+   `Uint8Array` in, `Uint8Array` out function, with today's path based
+   signature kept as a thin fs wrapper that the CLI keeps calling. The 76
+   core tests stay meaningful, the CLI does not change, and the browser runs
+   pdf-lib directly: no server, no upload, PDFs never leave the machine, and
+   the web app deploys as static files. One refactor serves both the web app
+   and Tauri.
+2. **A Node server calling core as-is.** No core changes today, but it needs
+   upload and download, temp file lifecycle and cleanup, request size limits,
+   and a process running somewhere. PDFs travel over the network. Tauri would
+   still need option 1 later, so this defers the work rather than avoiding it.
+
+Option 1 is the recommendation. Do not write a second browser only copy of
+the operations: two implementations of the same seven operations will drift,
+which is the exact thing sharing an engine was meant to prevent.
+
+### Tauri needs more than Node
+Building the Windows executable also needs the Rust toolchain, Microsoft C++
+Build Tools, and the WebView2 runtime, which ships with Windows 11. That is
+on top of Node, and it is why the `.exe` is built on Windows rather than
+here. See the note in Environment above.
