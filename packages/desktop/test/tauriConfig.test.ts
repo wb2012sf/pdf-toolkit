@@ -31,6 +31,24 @@ describe('the tauri window config', () => {
     expect(app.windows[0]?.dragDropEnabled).toBe(false);
   });
 
+  it('has a product name without spaces', async () => {
+    // productName becomes the exe name, the installer file name and the
+    // release asset name. A space there is sanitised into a dot by GitHub
+    // and percent encoded in the download URL, so it is avoided rather than
+    // worked around. The window title is separate and stays readable.
+    const name = (await config()).productName as unknown as string;
+
+    expect(name).not.toMatch(/\s/);
+  });
+
+  it('keeps a readable window title', async () => {
+    const app = (await config()).app as unknown as {
+      windows: { title?: string }[];
+    };
+
+    expect(app.windows[0]?.title).toBe('PDF Toolkit');
+  });
+
   it('keeps a content security policy', async () => {
     const app = (await config()).app as unknown as {
       security: { csp?: string | null };
