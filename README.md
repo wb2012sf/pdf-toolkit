@@ -33,14 +33,33 @@ nvm use
 **Windows.** nvm is not part of Windows and does not come with Node, so
 `nvm install` fails with *"The term 'nvm' is not recognized"* until you
 install it. The Windows version is nvm-windows, a different project from the
-nvm used above:
+nvm used above.
+
+Use winget, which is built into current Windows:
 
 ```powershell
 winget install CoreyButler.NVMforWindows
 ```
 
-Or download `nvm-setup.exe` from
-<https://github.com/coreybutler/nvm-windows/releases/latest> and run it.
+This is the route to prefer. winget resolves the package from Microsoft's
+curated manifest repository and verifies its hash for you, so there is
+nothing to check by hand and no browser download to get wrong.
+
+If winget is unavailable, download from
+<https://github.com/coreybutler/nvm-windows/releases/latest>. Take
+`nvm-setup.zip` rather than the bare `nvm-setup.exe`: the project publishes a
+checksum for the zip and not for the exe, so the zip is the one you can
+actually verify before running.
+
+```powershell
+certutil -hashfile nvm-setup.zip MD5
+```
+
+Compare that against `nvm-setup.zip.checksum.txt` on the same release page,
+then extract and run the installer inside. MD5 is weak against a determined
+attacker, but it does catch a corrupted or substituted download. Expect
+SmartScreen to warn either way; you can check the publisher through
+right-click, Properties, Digital Signatures.
 
 **Then close the shell and open a new one.** The installer edits `PATH`, and
 an already open session will not see it. In a new Administrator PowerShell:
