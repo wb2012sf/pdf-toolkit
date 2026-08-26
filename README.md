@@ -134,6 +134,50 @@ Or `npm link -w @pdf-toolkit/cli` to get `pdf-toolkit` on your PATH. On
 Windows that creates a `pdf-toolkit.cmd` shim, so the command works the same
 from PowerShell.
 
+### Troubleshooting setup
+
+Most of these are the same thing wearing different hats: **a shell keeps the
+PATH it started with.** Anything that changes PATH needs a new shell, not a
+reinstall.
+
+**`nvm : The term 'nvm' is not recognized`**
+
+nvm-windows is not installed, or it is and this shell was already open when
+it went in. Install it per step 1, then close the shell and open a new one.
+
+**`npm` or `node` not recognized, though `nvm install` succeeded**
+
+Installing a version does not activate it. Run `nvm use 24.19.0` in an
+Administrator PowerShell, then open a new shell.
+
+```powershell
+nvm list   # the active version is marked with *
+```
+
+If nothing is marked, nothing is active, which is why there is no `node` and
+no `npm`.
+
+**`nvm use` fails with a permissions error**
+
+It writes a symlink under `C:\Program Files\nodejs`, so the shell has to be
+elevated. Run PowerShell as Administrator.
+
+**`./bootstrap.sh` is not recognized on Windows**
+
+It is a bash script. Use `npm install` instead, per step 3, or run
+`bash bootstrap.sh` from Git Bash or WSL.
+
+**`node -v` reports something other than 24.x**
+
+nvm switches machine wide, so another project can leave a different version
+active. `nvm list` shows what is installed and `nvm use 24.19.0` switches
+back. The project requires `>=24 <25` and will refuse to install otherwise.
+
+**`git clone` asks for credentials or fails with a permission error**
+
+The repository is private. Use an SSH key on that machine, or `gh auth login`
+followed by `gh repo clone wb2012sf/pdf-toolkit`.
+
 ## Commands
 
 ```bash
