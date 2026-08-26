@@ -205,6 +205,54 @@ back. The project requires `>=24 <25` and will refuse to install otherwise.
 The repository is private. Use an SSH key on that machine, or `gh auth login`
 followed by `gh repo clone wb2012sf/pdf-toolkit`.
 
+### Troubleshooting after a pull
+
+**Anything is "not recognized", or an import cannot be resolved, right after
+`git pull`**
+
+Run `npm install`. A pull brings new source, not new dependencies, so any
+commit that added one leaves the tree half updated. This has already caught
+people out twice: `fflate` when split arrived, and the Tauri CLI when the
+desktop shell did. Make it a habit:
+
+```bash
+git pull && npm install
+```
+
+**`'tauri' is not recognized`**
+
+The same thing: `@tauri-apps/cli` is a dependency and needs installing. It
+hoists to the repository root's `node_modules/.bin`, not into
+`packages/desktop`, which is normal for a workspace and not the problem.
+
+**`failed to run 'cargo metadata' ... program not found`**
+
+`tauri dev` and `tauri build` compile Rust, and there is no toolchain on the
+machine. You probably do not need one:
+
+- To work on the interface, `npm run dev` runs the same screens in a browser
+  with no Rust involved. Only the save differs.
+- To just use the app, download an installer the Desktop build workflow
+  already produced rather than compiling your own:
+  `gh run download --name pdf-toolkit-windows`.
+
+If you do want the native dev loop, install both, then reopen the shell:
+
+```powershell
+winget install Rustlang.Rustup
+winget install Microsoft.VisualStudio.2022.BuildTools
+```
+
+The Build Tools installer needs the **Desktop development with C++** workload
+ticked; the default selection leaves out the MSVC linker Tauri links with.
+Check with `cargo --version` before trying again.
+
+**The installer is blocked by SmartScreen**
+
+The bundles are unsigned, so Windows warns about an unrecognised publisher.
+Choose "More info" then "Run anyway", or sign the bundle if this is ever
+distributed to anyone else.
+
 ## Commands
 
 Everything below is written as `pdf-toolkit`, which is form **c** from step 4.
