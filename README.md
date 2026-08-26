@@ -364,12 +364,20 @@ obvious one to overwrite, and split produces a directory of files.
 
 ## Desktop app
 
-`packages/desktop` is a graphical merge screen, and the frontend the Tauri
-build will wrap into an installer. It runs the engine in the page, so nothing
-is uploaded anywhere.
+`packages/desktop` is a graphical front end for the same engine. It runs the
+operations in the page, so nothing is uploaded anywhere.
+
+Two ways to run it. **In a browser**, which needs only Node:
 
 ```bash
-npm run dev      # from the repo root, opens a dev server
+npm run dev        # dev server on http://localhost:5173
+```
+
+**As a native window**, which is what gets installed:
+
+```bash
+npm run tauri:dev     # the app, with the dev server behind it
+npm run tauri:build   # produces the installer
 ```
 
 All seven operations are there, one tab each. Merge takes several files:
@@ -382,6 +390,30 @@ a single zip of the pages, named the same way the CLI names them.
 
 It is plain TypeScript with no UI framework: Vite is a dev dependency, so the
 shipped bundle contains the engine and nothing else.
+
+### Building the installer
+
+`tauri:build` needs more than Node, because it compiles a Rust binary:
+
+- **Rust**, via <https://rustup.rs>
+- **Microsoft C++ Build Tools**, for the MSVC linker
+- **WebView2**, already present on Windows 11 and current Windows 10
+
+Output lands in `packages/desktop/src-tauri/target/release/bundle/`. That
+directory is gitignored; a Rust target tree runs to gigabytes.
+
+You do not have to build it locally. The **Desktop build** workflow compiles
+it on a Windows runner and attaches the installer as an artifact. It is
+triggered by hand or by a `v*` tag rather than on every push, since Windows
+runner minutes are expensive:
+
+```bash
+gh workflow run "Desktop build" --ref main
+```
+
+Saving differs between the two ways of running. In the native app a system
+save dialog chooses the path and the app writes the file; served in a browser
+it falls back to an ordinary download, because a webview will not run one.
 
 ## Using the engine directly
 

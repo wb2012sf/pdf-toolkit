@@ -51,7 +51,10 @@ packages/core/src/*.ts    filesystem wrappers over that layer: validate path
                           write. Import as `@pdf-toolkit/core`.
 packages/cli         thin commander wrapper, one subcommand per operation
 packages/desktop     Vite plus vanilla TypeScript, no UI framework. Talks to
-                     the bytes layer only. Becomes the Tauri frontend.
+                     the bytes layer only.
+packages/desktop/src-tauri  the Tauri shell: window, native save dialog, file
+                     write. No custom commands, the operations all run in the
+                     webview.
 ```
 Add an operation in the bytes layer and wrap it, never the other way round,
 and never a second copy of the logic for a front end.
@@ -142,12 +145,19 @@ What is left for the desktop app, in order:
    the shipped bundle carries no framework; ordering logic lives in
    `src/fileList.ts` where it is tested without a browser, and `src/main.ts`
    is glue.
-2. The Tauri shell around it, producing the installer. `src/main.ts` has one
-   function, `save`, that does a blob download; that is the piece that
-   becomes the native save dialog.
+2. ~~The Tauri shell around it.~~ Done: `npm run tauri:dev` for the window,
+   `npm run tauri:build` for the installer. `src/save.ts` decides at runtime
+   between the native save dialog and a blob download, and it is the only
+   file that knows the difference.
 3. Command line mode in the same binary, so `pdf-toolkit merge ...` still
    works for anyone who prefers typing. Tauri v2 has a CLI plugin for
    parsing the arguments.
+
+The shell cannot be built on this VPS: no Rust toolchain, no webview
+libraries, no passwordless sudo. The **Desktop build** workflow compiles it on
+a Windows runner instead, by hand or on a `v*` tag rather than per push, since
+Windows runner minutes are expensive. That job is the only automated check the
+Rust side gets.
 
 All seven operations are in the UI, one tab each. Split returns a zip, since
 a page cannot write a folder; under Tauri that becomes a native folder picker
