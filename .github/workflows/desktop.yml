@@ -61,6 +61,15 @@ jobs:
             exit 1
           fi
 
+      # The cargo cache restores the whole target directory, which is the
+      # point: compiled dependencies are what make a rebuild fast. It also
+      # restores previously bundled installers though, and nothing removes
+      # those when the product name or version changes, so the directory ends
+      # up holding output from more than one build.
+      - name: Clear stale bundles
+        shell: bash
+        run: rm -rf packages/desktop/src-tauri/target/release/bundle
+
       # Runs the frontend build first, per beforeBuildCommand in tauri.conf.
       - name: Build the app
         run: npm run tauri:build -w @pdf-toolkit/desktop
@@ -88,15 +97,26 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
+          shopt -s nullglob
           bundle=packages/desktop/src-tauri/target/release/bundle
-          msi=$(ls "$bundle"/msi/*.msi)
-          exe=$(ls "$bundle"/nsis/*-setup.exe)
+
+          # Arrays rather than command substitution. Capturing a glob into a
+          # string joins multiple matches with a newline and then passes the
+          # whole thing as one filename, which is how a leftover installer
+          # produced a path containing a newline instead of a clear error.
+          msi=("$bundle"/msi/*.msi)
+          exe=("$bundle"/nsis/*-setup.exe)
+          if [ ${#msi[@]} -ne 1 ] || [ ${#exe[@]} -ne 1 ]; then
+            echo "::error::expected exactly one installer of each kind, found ${#msi[@]} msi and ${#exe[@]} exe"
+            printf '  %s\n' "${msi[@]}" "${exe[@]}"
+            exit 1
+          fi
           echo "attaching:"
-          ls -la "$msi" "$exe"
+          ls -la "${msi[0]}" "${exe[0]}"
           # Draft, so the release can be read over before anyone can download
           # it. Publishing is one click in the web UI.
           gh release create "$GITHUB_REF_NAME" \
             --draft \
             --generate-notes \
             --title "PDF Toolkit $GITHUB_REF_NAME" \
-            "$msi" "$exe"
+            "${msi[0]}" "${exe[0]}"
