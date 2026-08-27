@@ -476,6 +476,36 @@ Saving differs between the two ways of running. In the native app a system
 save dialog chooses the path and the app writes the file; served in a browser
 it falls back to an ordinary download, because a webview will not run one.
 
+### Signing the installer
+
+The released installers are **unsigned**, so Windows warns about an
+unrecognised publisher. The plumbing to sign them is already in the workflow
+and switches on by adding one secret, with no file to edit:
+
+```
+WINDOWS_SIGN_COMMAND
+```
+
+Set it to the full command your certificate provider's CLI needs, with `%1`
+where the file path goes. Tauri runs it once per binary before bundling, so
+the executable inside the installer is signed and not just the installer
+around it. Anything else the command needs, such as `AZURE_CLIENT_ID`, goes
+in the repository's other secrets.
+
+With the secret absent the build is exactly as it is now, unsigned. With it
+present, a step after the build fails the run if any installer comes out
+unsigned, because an unsigned binary reaching a release is worse than a
+failed build: nothing looks wrong until a user is warned.
+
+Worth knowing before buying anything. Since 2023 the private key has to live
+on certified hardware, so there is no `.pfx` file to drop into CI: providers
+issue either a USB token, which a hosted runner cannot use, or a cloud
+signing service, which it can. Azure Trusted Signing, SSL.com eSigner and
+DigiCert KeyLocker are the cloud options. Only an Extended Validation
+certificate clears the SmartScreen warning immediately; anything cheaper
+builds reputation through download volume, which a low-traffic project may
+never accumulate.
+
 ## Using the engine directly
 
 `packages/core` comes in two layers.

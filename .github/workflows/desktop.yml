@@ -70,9 +70,67 @@ jobs:
         shell: bash
         run: rm -rf packages/desktop/src-tauri/target/release/bundle
 
+      # Code signing is optional and off unless credentials exist. With no
+      # WINDOWS_SIGN_COMMAND secret this does nothing and the build is exactly
+      # as before, unsigned.
+      #
+      # The overlay is written here rather than committed, so nothing in the
+      # repository can break an unsigned build, and so no certificate detail
+      # is ever in git. Tauri runs the command once per binary before
+      # bundling, replacing %1 with the file path, which is what gets the
+      # executable inside the installer signed and not just the installer.
+      #
+      # The command itself depends on the provider: Azure Trusted Signing,
+      # SSL.com eSigner and DigiCert KeyLocker each ship their own CLI. Put
+      # the whole invocation in the secret, and anything it needs, such as
+      # AZURE_CLIENT_ID, in the repository's other secrets.
+      - name: Prepare signing
+        id: signing
+        shell: bash
+        env:
+          SIGN_COMMAND: ${{ secrets.WINDOWS_SIGN_COMMAND }}
+        run: |
+          set -euo pipefail
+          if [ -z "${SIGN_COMMAND:-}" ]; then
+            echo "no signing credentials configured, the build will be unsigned"
+            echo "config=" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          # node rather than a heredoc, so the command is JSON escaped
+          # properly whatever quoting the provider's CLI needs.
+          SIGN_COMMAND="$SIGN_COMMAND" node -e '
+            const fs = require("node:fs");
+            fs.writeFileSync(process.argv[1], JSON.stringify({
+              bundle: { windows: { signCommand: process.env.SIGN_COMMAND } },
+            }, null, 2));
+          ' packages/desktop/src-tauri/tauri.signing.conf.json
+          echo "signing enabled"
+          # Relative to packages/desktop, because that is where npm -w runs
+          # the script and where the tauri CLI resolves the path from. A
+          # repository-root path would not be found.
+          echo "config=--config src-tauri/tauri.signing.conf.json" >> "$GITHUB_OUTPUT"
+
       # Runs the frontend build first, per beforeBuildCommand in tauri.conf.
       - name: Build the app
-        run: npm run tauri:build -w @pdf-toolkit/desktop
+        run: npm run tauri:build -w @pdf-toolkit/desktop -- ${{ steps.signing.outputs.config }}
+
+      # Only meaningful when signing ran. An unsigned binary reaching a
+      # release is worse than a failed build, because nothing about the
+      # installer looks wrong until a user is warned about it.
+      - name: Check the installers are signed
+        if: steps.signing.outputs.config != ''
+        shell: pwsh
+        run: |
+          $bundle = "packages/desktop/src-tauri/target/release/bundle"
+          $files = Get-ChildItem -Path $bundle -Recurse -Include *.msi,*-setup.exe
+          if (-not $files) { throw "no installers found to verify" }
+          foreach ($file in $files) {
+            $sig = Get-AuthenticodeSignature $file.FullName
+            Write-Host "$($file.Name): $($sig.Status)"
+            if ($sig.Status -ne 'Valid') {
+              throw "$($file.Name) is not validly signed: $($sig.Status)"
+            }
+          }
 
       # Kept for manual runs, where there is no release to attach them to.
       - name: Upload the installer
