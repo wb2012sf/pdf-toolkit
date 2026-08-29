@@ -546,7 +546,7 @@ are revisited in v2.
 ## Development
 
 ```bash
-npm test         # typecheck, then 223 tests across the three packages
+npm test         # typecheck, then the tests in every package
 npm run build    # core first, then cli
 npm run lint     # biome across the monorepo
 npm run format   # biome, applying safe fixes
