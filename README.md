@@ -263,6 +263,18 @@ pdf-toolkit reorder <input>          --order <pages>  [-o <file> | --in-place]
 pdf-toolkit rotate  <input>          -d <degrees> [-p <pages>]
                                                       [-o <file> | --in-place]
 pdf-toolkit extract <input>          -p <pages>       [-o <file> | --in-place]
+
+pdf-toolkit protect <input>          -p <password> [--owner-password <pw>]
+                                     [-a <algorithm>] [--no-copy ...]
+                                                      [-o <file> | --in-place]
+pdf-toolkit unlock  <input>          -p <password>    [-o <file> | --in-place]
+pdf-toolkit sign    <input>          -c <cert.p12> -p <password>
+                                     [--reason <text>] [--location <text>]
+                                                      [-o <file> | --in-place]
+pdf-toolkit fields  <input>
+pdf-toolkit fill    <input>          -s <field=value> [-s ...]
+                                                      [-o <file> | --in-place]
+pdf-toolkit flatten <input>                           [-o <file> | --in-place]
 ```
 
 ### merge
@@ -367,6 +379,74 @@ is copied twice, the only unambiguous reading of a repeat.
 pdf-toolkit extract book.pdf -p 4,1,3 -o excerpt.pdf   # that exact sequence
 pdf-toolkit extract book.pdf -p 2-5 -o chapter.pdf
 ```
+
+### protect and unlock
+
+Encrypts with AES-256 unless told otherwise. Give a user password, an owner
+password, or both: the user password is needed to open the document at all,
+the owner password is what lets the protection be changed later.
+
+```bash
+pdf-toolkit protect tax.pdf -p hunter2 -o tax-locked.pdf
+pdf-toolkit protect tax.pdf -p hunter2 --owner-password admin --no-copy \
+  -o tax-locked.pdf
+pdf-toolkit unlock tax-locked.pdf -p hunter2 -o tax.pdf
+```
+
+Permissions are allowed unless you forbid them: `--no-print`,
+`--no-print-high-quality`, `--no-modify`, `--no-copy`, `--no-annotate`,
+`--no-fill-forms`, `--no-accessibility`, `--no-assemble`. They are advisory,
+and a reader that chooses to ignore them is not stopped by anything in the
+file. The password is not advisory; the content is genuinely encrypted.
+
+`unlock` checks the password before writing anything, so a typo fails with a
+message instead of leaving you an output file that cannot be read.
+
+Passwords given as command line arguments are visible to other processes and
+land in your shell history. For a local tool on your own machine that is
+usually fine, but it is worth knowing.
+
+### sign
+
+Signs with a PKCS#12 certificate, the `.p12` or `.pfx` file that holds a
+private key and its certificate together.
+
+```bash
+pdf-toolkit sign contract.pdf -c mykey.p12 -p certpassword \
+  --reason "I approve this document" --location Bern -o signed.pdf
+```
+
+The signature is **invisible**: it is a real cryptographic signature in a
+proper signature field, but nothing is drawn on the page. Placing a visible
+one needs page coordinates, and this tool has no way to show you a page.
+
+Signing happens entirely on your machine and contacts nothing.
+
+A self-signed certificate produces a signature that is cryptographically
+valid and that **Acrobat will still show as "validity unknown"**, because no
+authority vouches for it. For a green tick the certificate has to chain to
+the Adobe Approved Trust List or the EU Trusted List, which means buying one.
+Checking somebody else's signature is not supported.
+
+### fields, fill and flatten
+
+`fields` lists what a form contains, which is how you find out what to pass
+to `fill`.
+
+```bash
+pdf-toolkit fields application.pdf
+pdf-toolkit fill application.pdf -s "applicant.name=Ada Lovelace" \
+  -s agree=true -s country=DE -o filled.pdf
+pdf-toolkit flatten filled.pdf -o final.pdf
+```
+
+Repeat `-s` for each field. `true` and `false` set a checkbox; anything else
+is used as typed. A field name the document does not have is an error rather
+than a silent no-op, so a typo tells you.
+
+`flatten` bakes the values into the page so they are no longer editable. It
+is one way, which is the point of it, so keep the unflattened file if you
+might need it.
 
 ## Page specs
 
@@ -534,14 +614,29 @@ subpath imports nothing from `node:`, which a test enforces, so bundling it
 for the browser pulls in no polyfills.
 
 Every function validates its arguments and throws with a clear message rather
-than letting bad input reach pdf-lib. None of the path functions will write
+than letting bad input reach the engine. None of the path functions will write
 over their own input.
+
+Two engines sit behind that interface. The page operations run on pdf-lib;
+encryption, forms and signing run on LibPDF, which pdf-lib cannot do. Which
+one is in play is an implementation detail and the calling code never sees it.
+`signPdfBytes` is the single exception to the uniform shape: it returns
+`{ bytes, warnings }` rather than bytes, because signing can succeed and still
+have something to report.
 
 ## Not supported
 
-Deliberately out of scope for v1: encrypted or password protected PDFs,
-digital signatures, annotations, form filling, OCR. Encryption and signatures
-are revisited in v2.
+**Annotations.** Highlighting, notes and drawing all need you to point at a
+place on a page, and this tool cannot show you a page.
+
+**OCR.** Turning a scan into text needs a recognition engine, which is a
+different kind of program entirely. Note that a scanned PDF has no text in it
+at all, so `fields` and the rest have nothing to work with either.
+
+**Checking signatures.** Signing works; verifying somebody else's signature
+does not.
+
+**Certificate based encryption.** Password protection only.
 
 ## Development
 

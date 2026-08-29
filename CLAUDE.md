@@ -2,25 +2,34 @@
 
 ## What this is
 A CLI tool for page-level PDF manipulation: merge, split, insert, delete, reorder,
-rotate, extract. Later phases add a web app and a Tauri-based Windows desktop app
-that reuse the same core engine. This is not a Preview clone yet, page operations
-only.
+rotate, extract. A Tauri desktop app ships the same engine. Since v1 it also does
+encryption, form filling and signing. This is not a Preview clone: there is no
+page view, and that limit is what decides which features are possible.
 
-## Explicitly out of scope for v1
-- Password-protected / encrypted PDFs
-- Digital signatures
-- Annotations, form filling, OCR
+## Explicitly out of scope
+Still out, and for reasons rather than as a backlog:
+- **Annotations.** Inherently spatial, and there is no page view to point at.
+  The exception, if it is ever wanted, is search anchored: `findText` plus
+  `rectsToQuadPoints` can highlight every match with no renderer.
+- **OCR.** Needs a recognition engine, which LibPDF is not and does not have.
+- **Signature verification.** LibPDF signs but does not verify. Do not promise it.
+- **Certificate based encryption.** Password protection only.
 
-Revisit these in v2 with LibPDF (`@libpdf/core`), not pdf-lib. It covers four
-of the five, OCR being the exception. See **v2 groundwork** at the end of this
-file for what was verified and in what order it is worth doing.
-Do not add `qpdf` or any crypto-handling dependency during v1.
+Done as of 2026-08-29, all on LibPDF (`@libpdf/core`), never pdf-lib:
+`protect`, `unlock`, `sign`, `fields`, `fill`, `flatten`. See **v2 groundwork**
+at the end of this file for what was verified about the library and the traps
+that shaped these implementations.
+
+The old rule "do not add qpdf or any crypto-handling dependency during v1" has
+served its purpose: v1 shipped, and LibPDF is now a dependency of
+`packages/core`. Still do not add `qpdf`.
 
 ## Stack
 - TypeScript, strict mode, no `any`
 - Node.js 24 (see `.nvmrc`), don't rely on Node 22-only or Node 26-only APIs
 - npm workspaces monorepo (`packages/core`, `packages/cli`)
-- Core engine: `pdf-lib`
+- Engines: `pdf-lib` for the page operations, `@libpdf/core` for encryption,
+  forms and signing. One operation, one engine, never both in a file.
 - CLI: `commander`
 - Tests: `vitest`
 - Lint/format: Biome (single tool, single config, fast). Only add ESLint+Prettier
@@ -202,12 +211,30 @@ on top of Node, and it is why the `.exe` is built on Windows rather than
 here. See the note in Environment above.
 
 ## v2 groundwork
-Checked on 2026-08-29 against `@libpdf/core` 0.4.1, unpacked and run in a
-scratchpad. Nothing was added to this repo, since v1 still forbids a crypto
-handling dependency. Redo the check before relying on any of it: this is a
-pre-1.0 library and the API can move.
+Checked on 2026-08-29 against `@libpdf/core` 0.4.1. Encryption, forms and
+signing were all built on the strength of it that same day, so the notes below
+are the reasoning behind shipped code rather than a plan. Re-check before
+relying on anything not covered by a test: this is a pre-1.0 library and the
+API can move.
 
-LibPDF covers four of the five v1 exclusions. Ranked by how well each fits
+Traps found while implementing, each now guarded by a test:
+- **A wrong password does not fail on load.** `PDF.load` accepts any password
+  and reports the outcome through `isAuthenticated`. Saving from an
+  unauthenticated document writes a file that looks fine and whose contents
+  cannot be recovered. `unlockPdfBytes` checks and refuses. Verified that no
+  content leaks that way, so it is a footgun and not a bypass.
+- **`form.fill()` swallows unknown names**, returning them in a `skipped` list
+  and carrying on, which would turn a typo into a silent no-op.
+  `fillFormBytes` turns that list into an error.
+- **`hasForm` is a method, not a property.** Reading `doc.hasForm` gives a
+  truthy function. Prefer `doc.getForm()` and check for null, which the type
+  checker enforces anyway.
+- **A self-signed certificate signs with no warnings at all.** Trust is the
+  reader's judgement against its own trust list, not something the signer
+  reports, so an empty `warnings` array says nothing about whether Acrobat
+  will accept it.
+
+LibPDF covers four of the five old exclusions. Ranked by how well each fits
 what is already built, not by how interesting it is:
 
 1. **Encryption.** The best fit, and far easier than its place on a list of
