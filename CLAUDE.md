@@ -360,6 +360,26 @@ bytes layer without tripping `bytes-purity.test.ts`.
 **Migrate the seven when LibPDF reaches 1.0**, or sooner if pdf-lib draws a
 CVE. Review once two v2 features have shipped on it either way.
 
+### Review held on 2026-08-29: still not yet
+Three features shipped on LibPDF the same day the decision was made, so the
+review is done and the answer is unchanged. Migrating the seven page
+operations still waits for 1.0.
+
+What the trial settled: the library did everything asked of it, its output was
+verified independently by pdf-lib and by openssl rather than taken on trust,
+and the API held still across encryption, forms and signing. The four traps
+recorded above were sharp edges, not defects.
+
+What the trial did not settle, and this is the part that matters: every
+document involved was a synthetic fixture built by pdf-lib. The reason for
+waiting was never capability. It was the hundredfold adoption gap and how a
+young parser copes with real world broken PDFs, and nothing here has tested
+that. It also remains 0.4.1.
+
+So the evidence the decision is actually waiting on arrives from ordinary use,
+not from another round of building. When protect, fill and sign have handled
+real files for a while, revisit. Until then the seven stay on pdf-lib.
+
 Two rules while both are present:
 - **One operation, one engine.** Never import both in the same bytes layer
   file. An operation that needs both is the argument that it is time to

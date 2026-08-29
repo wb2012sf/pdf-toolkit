@@ -677,9 +677,10 @@ CLAUDE.md for the conventions in full.
 
 ## Releasing
 
-The version is declared in six files: the four `package.json`s,
-`tauri.conf.json` and `Cargo.toml`. One command sets them all, and a test
-fails if they ever disagree.
+The version is declared in seven places: the four `package.json`s,
+`tauri.conf.json`, `Cargo.toml`, and the `.version()` call the CLI prints for
+`--version`. One command sets them all, and a test fails if they ever
+disagree.
 
 ```bash
 npm run version:set 0.2.0

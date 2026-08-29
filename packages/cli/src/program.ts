@@ -119,7 +119,7 @@ export function buildProgram(): Command {
   program
     .name('pdf-toolkit')
     .description('Page level PDF manipulation')
-    .version('0.1.0');
+    .version('0.2.0');
 
   program
     .command('merge')

@@ -26,6 +26,11 @@ const JSON_FILES = [
 
 const CARGO = 'packages/desktop/src-tauri/Cargo.toml';
 
+// commander is told the version as a literal, and it is what `pdf-toolkit
+// --version` prints. Miss it and the CLI cheerfully reports the previous
+// release.
+const PROGRAM = 'packages/cli/src/program.ts';
+
 const version = process.argv[2];
 
 if (version === undefined || !/^\d+\.\d+\.\d+$/.test(version)) {
@@ -38,18 +43,19 @@ Three numbers, no leading v: the tag adds that.`);
 
 // Rewrite the line rather than parsing and re-serialising, so formatting,
 // key order and comments survive untouched.
+// The check is that the declaration was found, not that it changed. A file
+// already at the target version is fine, and conflating the two makes a
+// re-run after a partial failure impossible, which is exactly when you want
+// one.
 for (const file of JSON_FILES) {
   const path = join(ROOT, file);
   const before = readFileSync(path, 'utf8');
-  const after = before.replace(
-    /^(\s*"version"\s*:\s*)"[^"]*"/m,
-    `$1"${version}"`
-  );
-  if (before === after) {
-    console.error(`no version field changed in ${file}, refusing to continue`);
+  const pattern = /^(\s*"version"\s*:\s*)"[^"]*"/m;
+  if (!pattern.test(before)) {
+    console.error(`no version field found in ${file}, refusing to continue`);
     process.exit(1);
   }
-  writeFileSync(path, after);
+  writeFileSync(path, before.replace(pattern, `$1"${version}"`));
   console.log(`  ${file}`);
 }
 
@@ -57,16 +63,31 @@ for (const file of JSON_FILES) {
 // versions are inline, as `tauri = { version = "2", ... }`, and must not move.
 const cargoPath = join(ROOT, CARGO);
 const cargoBefore = readFileSync(cargoPath, 'utf8');
-const cargoAfter = cargoBefore.replace(
-  /^version = "[^"]*"/m,
-  `version = "${version}"`
-);
-if (cargoBefore === cargoAfter) {
+const cargoPattern = /^version = "[^"]*"/m;
+if (!cargoPattern.test(cargoBefore)) {
   console.error(`no package version found in ${CARGO}, refusing to continue`);
   process.exit(1);
 }
-writeFileSync(cargoPath, cargoAfter);
+writeFileSync(
+  cargoPath,
+  cargoBefore.replace(cargoPattern, `version = "${version}"`)
+);
 console.log(`  ${CARGO}`);
+
+const programPath = join(ROOT, PROGRAM);
+const programBefore = readFileSync(programPath, 'utf8');
+const programPattern = /\.version\('[^']*'\)/;
+if (!programPattern.test(programBefore)) {
+  console.error(
+    `no .version(...) call found in ${PROGRAM}, refusing to continue`
+  );
+  process.exit(1);
+}
+writeFileSync(
+  programPath,
+  programBefore.replace(programPattern, `.version('${version}')`)
+);
+console.log(`  ${PROGRAM}`);
 
 // The lockfile records each workspace's own version, so leaving it behind
 // puts package.json and the lock out of step.

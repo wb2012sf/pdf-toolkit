@@ -26,6 +26,7 @@ const JSON_FILES = [
 ];
 
 const CARGO = 'packages/desktop/src-tauri/Cargo.toml';
+const PROGRAM = 'packages/cli/src/program.ts';
 
 async function jsonVersion(file: string): Promise<string> {
   const parsed = JSON.parse(await readFile(join(REPO, file), 'utf8')) as {
@@ -43,6 +44,15 @@ async function cargoVersion(): Promise<string> {
   return (match as RegExpMatchArray)[1] as string;
 }
 
+async function programVersion(): Promise<string> {
+  // What `pdf-toolkit --version` prints. commander is handed a literal, so it
+  // is the one declaration no manifest keeps honest.
+  const text = await readFile(join(REPO, PROGRAM), 'utf8');
+  const match = text.match(/\.version\('([^']+)'\)/);
+  expect(match, `${PROGRAM} declares no CLI version`).not.toBeNull();
+  return (match as RegExpMatchArray)[1] as string;
+}
+
 describe('the declared version', () => {
   it('is the same in every file that declares one', async () => {
     const found: Record<string, string> = {};
@@ -50,6 +60,7 @@ describe('the declared version', () => {
       found[file] = await jsonVersion(file);
     }
     found[CARGO] = await cargoVersion();
+    found[PROGRAM] = await programVersion();
 
     const distinct = [...new Set(Object.values(found))];
     expect(
