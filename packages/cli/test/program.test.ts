@@ -83,9 +83,11 @@ describe('pdf-toolkit CLI', () => {
       'extract',
       'insert',
       'merge',
+      'protect',
       'reorder',
       'rotate',
       'split',
+      'unlock',
     ]);
   });
 
@@ -297,5 +299,91 @@ describe('pdf-toolkit CLI', () => {
     await expect(
       run('insert', docPath, otherPath, '--at', 'x', '--output', outPath)
     ).rejects.toThrow(/--at/);
+  });
+  it('protects a PDF and unlocks it again', async () => {
+    await fixture();
+    const lockedPath = join(dir as string, 'locked.pdf');
+
+    await run(
+      'protect',
+      docPath,
+      '--password',
+      'hunter2',
+      '--output',
+      lockedPath
+    );
+    // pdf-lib is the oracle: it cannot write encryption, so a refusal from it
+    // is independent evidence the file really is protected.
+    await expect(pageSizesOf(lockedPath)).rejects.toThrow(/encrypted/i);
+
+    await run(
+      'unlock',
+      lockedPath,
+      '--password',
+      'hunter2',
+      '--output',
+      outPath
+    );
+    expect(await pageSizesOf(outPath)).toEqual(SIZES);
+  });
+
+  it('forbids a permission when asked, leaving the rest alone', async () => {
+    await fixture();
+    const lockedPath = join(dir as string, 'locked.pdf');
+
+    await run(
+      'protect',
+      docPath,
+      '--password',
+      'pw',
+      '--no-copy',
+      '--output',
+      lockedPath
+    );
+
+    await run('unlock', lockedPath, '--password', 'pw', '--output', outPath);
+    expect(await pageSizesOf(outPath)).toEqual(SIZES);
+  });
+
+  it('rejects protect with no password of either kind', async () => {
+    await fixture();
+
+    await expect(run('protect', docPath, '--output', outPath)).rejects.toThrow(
+      /--password, --owner-password, or both/
+    );
+  });
+
+  it('rejects an algorithm it cannot write', async () => {
+    await fixture();
+
+    await expect(
+      run(
+        'protect',
+        docPath,
+        '--password',
+        'pw',
+        '--algorithm',
+        'ROT13',
+        '--output',
+        outPath
+      )
+    ).rejects.toThrow(/algorithm must be one of/);
+  });
+
+  it('rejects unlocking with the wrong password', async () => {
+    await fixture();
+    const lockedPath = join(dir as string, 'locked.pdf');
+    await run(
+      'protect',
+      docPath,
+      '--password',
+      'right',
+      '--output',
+      lockedPath
+    );
+
+    await expect(
+      run('unlock', lockedPath, '--password', 'wrong', '--output', outPath)
+    ).rejects.toThrow(/password was not accepted/);
   });
 });

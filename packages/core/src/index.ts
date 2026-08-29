@@ -5,3 +5,10 @@ export { insertPages } from './insert.js';
 export { reorderPages } from './reorder.js';
 export { rotatePages } from './rotate.js';
 export { extractPages } from './extract.js';
+export {
+  type EncryptionAlgorithm,
+  type PdfPermissions,
+  type ProtectOptions,
+  protectPdf,
+} from './protect.js';
+export { unlockPdf } from './unlock.js';

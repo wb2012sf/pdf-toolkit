@@ -23,6 +23,7 @@
     "test:watch": "vitest"
   },
   "dependencies": {
+    "@libpdf/core": "^0.4.1",
     "pdf-lib": "^1.17.1"
   }
 }

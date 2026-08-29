@@ -1,12 +1,16 @@
 import assert from 'node:assert';
 import {
+  type EncryptionAlgorithm,
+  type PdfPermissions,
   deletePages,
   extractPages,
   insertPages,
   mergePdfs,
+  protectPdf,
   reorderPages,
   rotatePages,
   splitPdf,
+  unlockPdf,
 } from '@pdf-toolkit/core';
 import { Command } from 'commander';
 import { writeResult } from './inPlace.js';
@@ -25,6 +29,23 @@ function parseWholeNumber(value: string, flagName: string): number {
     `${flagName} needs a whole number, got "${value}"`
   );
   return Number(value.trim());
+}
+
+/**
+ * Commander sets a `--no-x` flag to true unless it was passed, so the
+ * permissions to send are exactly the ones that came back false. Anything the
+ * user did not mention is left out and stays allowed.
+ */
+function forbiddenPermissions(
+  flags: Partial<Record<keyof PdfPermissions, boolean>>
+): Partial<PdfPermissions> {
+  const permissions: Partial<PdfPermissions> = {};
+  for (const [name, allowed] of Object.entries(flags)) {
+    if (allowed === false) {
+      permissions[name as keyof PdfPermissions] = false;
+    }
+  }
+  return permissions;
 }
 
 /** Attach the shared destination flags to a single-input command. */
@@ -187,6 +208,90 @@ export function buildProgram(): Command {
         options.output,
         options.inPlace === true,
         (target) => extractPages(input, pages, target)
+      );
+    }
+  );
+
+  withDestination(
+    program
+      .command('protect')
+      .description('encrypt a PDF with a password')
+      .argument('<input>', 'PDF file to read')
+      .option(
+        '-p, --password <password>',
+        'password required to open the result'
+      )
+      .option(
+        '--owner-password <password>',
+        'password required to change the protection later'
+      )
+      .option(
+        '-a, --algorithm <name>',
+        'RC4-40, RC4-128, AES-128 or AES-256, default AES-256'
+      )
+      .option('--no-print', 'forbid printing')
+      .option('--no-print-high-quality', 'allow only low resolution printing')
+      .option('--no-modify', 'forbid changing the contents')
+      .option('--no-copy', 'forbid copying text and graphics')
+      .option('--no-annotate', 'forbid adding or changing annotations')
+      .option('--no-fill-forms', 'forbid filling in form fields')
+      .option('--no-accessibility', 'forbid extraction for accessibility')
+      .option('--no-assemble', 'forbid inserting, rotating and deleting pages')
+  ).action(
+    async (
+      input: string,
+      options: OutputOptions & {
+        password?: string | undefined;
+        ownerPassword?: string | undefined;
+        algorithm?: string | undefined;
+      } & Partial<Record<keyof PdfPermissions, boolean>>
+    ) => {
+      const {
+        output,
+        inPlace,
+        password,
+        ownerPassword,
+        algorithm,
+        ...permissionFlags
+      } = options;
+      assert(
+        password !== undefined || ownerPassword !== undefined,
+        'pass --password, --owner-password, or both'
+      );
+
+      await writeResult(input, output, inPlace === true, (target) =>
+        protectPdf(
+          input,
+          {
+            ...(password === undefined ? {} : { userPassword: password }),
+            ...(ownerPassword === undefined ? {} : { ownerPassword }),
+            ...(algorithm === undefined
+              ? {}
+              : { algorithm: algorithm as EncryptionAlgorithm }),
+            permissions: forbiddenPermissions(permissionFlags),
+          },
+          target
+        )
+      );
+    }
+  );
+
+  withDestination(
+    program
+      .command('unlock')
+      .description('remove password protection from a PDF')
+      .argument('<input>', 'protected PDF file to read')
+      .requiredOption(
+        '-p, --password <password>',
+        'a password that opens the document'
+      )
+  ).action(
+    async (input: string, options: OutputOptions & { password: string }) => {
+      await writeResult(
+        input,
+        options.output,
+        options.inPlace === true,
+        (target) => unlockPdf(input, options.password, target)
       );
     }
   );

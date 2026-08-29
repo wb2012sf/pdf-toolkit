@@ -10,3 +10,10 @@ export { insertPagesBytes } from './insert.js';
 export { reorderPagesBytes } from './reorder.js';
 export { rotatePagesBytes } from './rotate.js';
 export { extractPagesBytes } from './extract.js';
+export {
+  type EncryptionAlgorithm,
+  type PdfPermissions,
+  type ProtectOptions,
+  protectPdfBytes,
+} from './protect.js';
+export { unlockPdfBytes } from './unlock.js';
