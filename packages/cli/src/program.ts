@@ -4,6 +4,7 @@ import {
   type FormFieldInfo,
   type FormFieldValue,
   type PdfPermissions,
+  type SignatureWarning,
   deletePages,
   extractPages,
   fillForm,
@@ -14,6 +15,7 @@ import {
   readFormFields,
   reorderPages,
   rotatePages,
+  signPdf,
   splitPdf,
   unlockPdf,
 } from '@pdf-toolkit/core';
@@ -341,6 +343,74 @@ export function buildProgram(): Command {
         options.inPlace === true,
         (target) => unlockPdf(input, options.password, target)
       );
+    }
+  );
+
+  withDestination(
+    program
+      .command('sign')
+      .description('sign a PDF with a certificate, invisibly')
+      .argument('<input>', 'PDF file to sign')
+      .requiredOption(
+        '-c, --certificate <file>',
+        'PKCS#12 file holding the key and certificate, .p12 or .pfx'
+      )
+      .requiredOption(
+        '-p, --password <password>',
+        'password that opens the certificate file'
+      )
+      .option('--reason <text>', 'why the document is being signed')
+      .option('--location <text>', 'where it is being signed')
+      .option('--contact <text>', 'how to reach the signer')
+      .option(
+        '--field <name>',
+        'signature field to use, created if it does not exist'
+      )
+  ).action(
+    async (
+      input: string,
+      options: OutputOptions & {
+        certificate: string;
+        password: string;
+        reason?: string | undefined;
+        location?: string | undefined;
+        contact?: string | undefined;
+        field?: string | undefined;
+      }
+    ) => {
+      let warnings: SignatureWarning[] = [];
+      await writeResult(
+        input,
+        options.output,
+        options.inPlace === true,
+        async (target) => {
+          warnings = await signPdf(
+            input,
+            {
+              certificatePath: options.certificate,
+              password: options.password,
+              ...(options.reason === undefined
+                ? {}
+                : { reason: options.reason }),
+              ...(options.location === undefined
+                ? {}
+                : { location: options.location }),
+              ...(options.contact === undefined
+                ? {}
+                : { contactInfo: options.contact }),
+              ...(options.field === undefined
+                ? {}
+                : { fieldName: options.field }),
+            },
+            target
+          );
+        }
+      );
+
+      // Signing can succeed and still have something to say. Say it.
+      for (const warning of warnings) {
+        process.stderr.write(`warning: ${warning.code}: ${warning.message}\n`);
+      }
     }
   );
 

@@ -21,3 +21,10 @@ export {
   flattenForm,
   readFormFields,
 } from './form.js';
+export {
+  type SignFileOptions,
+  type SignOptions,
+  type SignatureResult,
+  type SignatureWarning,
+  signPdf,
+} from './sign.js';

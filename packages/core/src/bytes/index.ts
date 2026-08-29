@@ -26,3 +26,9 @@ export {
   flattenFormBytes,
   readFormFieldsBytes,
 } from './form.js';
+export {
+  type SignOptions,
+  type SignatureResult,
+  type SignatureWarning,
+  signPdfBytes,
+} from './sign.js';

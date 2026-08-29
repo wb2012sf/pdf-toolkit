@@ -1,6 +1,7 @@
 import { mkdtemp, readFile, readdir, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { PDFDocument } from 'pdf-lib';
 import { afterEach, describe, expect, it } from 'vitest';
 import { buildProgram } from '../src/program.js';
@@ -89,6 +90,7 @@ describe('pdf-toolkit CLI', () => {
       'protect',
       'reorder',
       'rotate',
+      'sign',
       'split',
       'unlock',
     ]);
@@ -483,5 +485,69 @@ describe('the form commands', () => {
 
     const form = (await PDFDocument.load(await readFile(outPath))).getForm();
     expect(form.getFields().length).toBe(0);
+  });
+});
+
+describe('the sign command', () => {
+  let dir: string | undefined;
+  const certificate = join(
+    dirname(fileURLToPath(import.meta.url)),
+    '..',
+    '..',
+    'core',
+    'test',
+    'fixtures',
+    'test-signing.p12'
+  );
+
+  afterEach(async () => {
+    if (dir) {
+      await rm(dir, { recursive: true, force: true });
+      dir = undefined;
+    }
+  });
+
+  it('signs a document with a certificate', async () => {
+    dir = await mkdtemp(join(tmpdir(), 'pdf-toolkit-sign-'));
+    const source = join(dir, 'doc.pdf');
+    const signed = join(dir, 'signed.pdf');
+    await writeFile(source, await makeTestPdf([[200, 201]]));
+
+    await run(
+      'sign',
+      source,
+      '--certificate',
+      certificate,
+      '--password',
+      'test',
+      '--reason',
+      'Approved',
+      '--output',
+      signed
+    );
+
+    const text = (await readFile(signed)).toString('latin1');
+    expect(text).toContain('/Type /Sig');
+    expect(text).toContain('/Reason (Approved)');
+  });
+
+  it('rejects a wrong certificate password', async () => {
+    dir = await mkdtemp(join(tmpdir(), 'pdf-toolkit-sign-'));
+    const source = join(dir, 'doc.pdf');
+    const signed = join(dir, 'signed.pdf');
+    await writeFile(source, await makeTestPdf([[200, 201]]));
+
+    await expect(
+      run(
+        'sign',
+        source,
+        '--certificate',
+        certificate,
+        '--password',
+        'wrong',
+        '--output',
+        signed
+      )
+    ).rejects.toThrow();
   });
 });
