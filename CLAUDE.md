@@ -11,7 +11,9 @@ only.
 - Digital signatures
 - Annotations, form filling, OCR
 
-Revisit encryption and signatures in v2 with LibPDF (`@libpdf/core`), not pdf-lib.
+Revisit these in v2 with LibPDF (`@libpdf/core`), not pdf-lib. It covers four
+of the five, OCR being the exception. See **v2 groundwork** at the end of this
+file for what was verified and in what order it is worth doing.
 Do not add `qpdf` or any crypto-handling dependency during v1.
 
 ## Stack
@@ -198,3 +200,88 @@ Building the Windows executable also needs the Rust toolchain, Microsoft C++
 Build Tools, and the WebView2 runtime, which ships with Windows 11. That is
 on top of Node, and it is why the `.exe` is built on Windows rather than
 here. See the note in Environment above.
+
+## v2 groundwork
+Checked on 2026-08-29 against `@libpdf/core` 0.4.1, unpacked and run in a
+scratchpad. Nothing was added to this repo, since v1 still forbids a crypto
+handling dependency. Redo the check before relying on any of it: this is a
+pre-1.0 library and the API can move.
+
+LibPDF covers four of the five v1 exclusions. Ranked by how well each fits
+what is already built, not by how interesting it is:
+
+1. **Encryption.** The best fit, and far easier than its place on a list of
+   v1 exclusions suggests. The `qpdf` ban above was a scope guard to keep v1
+   finishable, not a statement that this is hard.
+   RC4-40, RC4-128, AES-128 and AES-256 across revisions R2 to R6, reading and
+   writing. `PDF.load(bytes, { credentials })` opens a protected file,
+   `setProtection()` applies protection with user and owner passwords and
+   per-flag permissions, and `isEncrypted`, `hasUserPassword` and
+   `getPermissions` inspect one. No page view is involved: bytes in, a password
+   and some flags from a form, bytes out, the same shape as `rotate`. One tab
+   to protect, one to unlock.
+2. **Form filling.** `AcroForm` with `TextField`, `Checkbox`, `RadioGroup` and
+   `Dropdown`, plus flattening. Also needs no page view, because the fields
+   describe themselves: `tooltip` / `alternateName` is the PDF `/TU` entry and
+   is usually human readable, and `pageIndex` plus the widget rects give
+   document order. That is enough to generate an ordinary HTML form. Fall back
+   to the raw field name only when `/TU` is missing, since raw names look like
+   `topmostSubform[0].Page1[0].f1_07[0]`.
+3. **Signatures.** Signing works, confirmed end to end below.
+4. **Annotations.** Twenty classes covering highlight, ink, stamp, text and the
+   rest, but annotations are inherently spatial and the app has no page view.
+   The exception worth knowing: `findText` returns `bbox`, `pageIndex` and
+   per-character `charBoxes`, and `rectsToQuadPoints` converts those into the
+   quad points a highlight needs, so "highlight every occurrence of X" works
+   with no renderer at all.
+
+**OCR is absent and cannot be bolted on.** LibPDF's seven dependencies are
+`@noble/ciphers`, `@noble/hashes`, `@scure/base`, `asn1js`, `pkijs`, `pako` and
+`lru-cache`. None is a recognition engine, and OCR is impossible without one.
+Do not mistake `extractText` for OCR: it reads text objects already present in
+the content stream and returns nothing on a scanned page.
+
+### Signing was verified, not assumed
+A self-signed `.p12` from `openssl req -x509` plus `openssl pkcs12 -export`
+signed a document on the first try, no warnings. The output carried
+`/Type /Sig`, `/Filter /Adobe.PPKLite`, `/SubFilter /ETSI.CAdES.detached` and a
+real `/ByteRange`, in a proper AcroForm signature field rather than a drawn
+stamp. Extracting the PKCS#7 blob and checking the detached CMS signature
+against exactly the bytes the `/ByteRange` covers gave "CMS Verification
+successful", SHA-256 with RSA throughout.
+
+Three things that follow from that run:
+- `P12Signer.create(bytes, password)` takes a plain openssl `.p12`, with no
+  special provisioning, and it creates the signature field itself when the
+  document has none.
+- Signing is genuinely offline. Nothing touched the network, which is what the
+  app's "nothing leaves this machine" tagline promises. `GoogleKmsSigner` and
+  `CloudSigner` would break that promise, so prefer `P12Signer` and treat the
+  others as a deliberate decision rather than a default.
+- `sign()` returns a `SignResult`, not bytes. Use `result.bytes` and check
+  `result.warnings`. Every operation in the current engine returns a
+  `Uint8Array` directly, so this wrapper will not look like the other seven.
+  For `B-LT` and `B-LTA` the result also carries `ltvData` and the caller has
+  to write the DSS incremental update itself; plain `B-B` signing needs none
+  of that.
+
+### Limits to design around
+- **Signature verification is not implemented.** Signing works, checking
+  somebody else's signature does not. Do not promise it.
+- **A self-signed certificate shows as "validity unknown" in Acrobat.** The
+  signature is cryptographically real, the vouching is not. For a green check
+  the certificate has to chain to the Adobe Approved Trust List or the EU
+  Trusted List, which costs a few hundred a year and requires identity
+  verification. Worse for us, those CAs increasingly require the private key to
+  live on a hardware token, and will not hand over a downloadable `.p12` at
+  all, so a file picker for `.p12` serves self-signed and internal certificates
+  and not much else.
+- **Certificate based encryption is unsupported.** Password encryption only.
+- **LibPDF is 0.4.1.** Pre-1.0 is the real risk here, not capability.
+
+### Open question before any of this starts
+LibPDF also does merge and split, so it could replace pdf-lib outright rather
+than sit beside it. Running both means every document is parsed twice by two
+libraries that can disagree about a damaged file. Decide which way before
+writing the first wrapper, because it determines whether v2 is an addition or
+a migration.
