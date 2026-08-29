@@ -81,6 +81,9 @@ describe('pdf-toolkit CLI', () => {
     expect(names).toEqual([
       'delete',
       'extract',
+      'fields',
+      'fill',
+      'flatten',
       'insert',
       'merge',
       'protect',
@@ -385,5 +388,100 @@ describe('pdf-toolkit CLI', () => {
     await expect(
       run('unlock', lockedPath, '--password', 'wrong', '--output', outPath)
     ).rejects.toThrow(/password was not accepted/);
+  });
+});
+
+/** A PDF with a text field and a checkbox, for the form commands. */
+async function makeFormPdf(): Promise<Uint8Array> {
+  const doc = await PDFDocument.create();
+  const page = doc.addPage([400, 400]);
+  const form = doc.getForm();
+  const name = form.createTextField('applicant.name');
+  name.setText('');
+  name.addToPage(page, { x: 20, y: 340, width: 200, height: 20 });
+  const agree = form.createCheckBox('agree');
+  agree.addToPage(page, { x: 20, y: 300, width: 15, height: 15 });
+  return doc.save();
+}
+
+describe('the form commands', () => {
+  let dir: string | undefined;
+  let formPath: string;
+  let outPath: string;
+
+  afterEach(async () => {
+    if (dir) {
+      await rm(dir, { recursive: true, force: true });
+      dir = undefined;
+    }
+  });
+
+  async function formFixture(): Promise<void> {
+    dir = await mkdtemp(join(tmpdir(), 'pdf-toolkit-form-'));
+    formPath = join(dir, 'form.pdf');
+    outPath = join(dir, 'out.pdf');
+    await writeFile(formPath, await makeFormPdf());
+  }
+
+  it('lists the fields it finds', async () => {
+    await formFixture();
+    const written: string[] = [];
+    const original = process.stdout.write.bind(process.stdout);
+    process.stdout.write = ((chunk: string): boolean => {
+      written.push(String(chunk));
+      return true;
+    }) as typeof process.stdout.write;
+    try {
+      await run('fields', formPath);
+    } finally {
+      process.stdout.write = original;
+    }
+
+    expect(written.join('')).toMatch(/applicant\.name\s+\[text\]/);
+    expect(written.join('')).toMatch(/agree\s+\[checkbox\]/);
+  });
+
+  it('fills a text field and a checkbox', async () => {
+    await formFixture();
+
+    await run(
+      'fill',
+      formPath,
+      '--set',
+      'applicant.name=Ada Lovelace',
+      '--set',
+      'agree=true',
+      '--output',
+      outPath
+    );
+
+    const form = (await PDFDocument.load(await readFile(outPath))).getForm();
+    expect(form.getTextField('applicant.name').getText()).toBe('Ada Lovelace');
+    expect(form.getCheckBox('agree').isChecked()).toBe(true);
+  });
+
+  it('rejects a --set without an equals sign', async () => {
+    await formFixture();
+
+    await expect(
+      run('fill', formPath, '--set', 'nonsense', '--output', outPath)
+    ).rejects.toThrow(/--set needs field=value/);
+  });
+
+  it('rejects a field the document does not have', async () => {
+    await formFixture();
+
+    await expect(
+      run('fill', formPath, '--set', 'nope=x', '--output', outPath)
+    ).rejects.toThrow(/no field called "nope"/);
+  });
+
+  it('flattens a form so no fields remain', async () => {
+    await formFixture();
+
+    await run('flatten', formPath, '--output', outPath);
+
+    const form = (await PDFDocument.load(await readFile(outPath))).getForm();
+    expect(form.getFields().length).toBe(0);
   });
 });

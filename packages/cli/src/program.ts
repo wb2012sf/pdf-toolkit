@@ -1,12 +1,17 @@
 import assert from 'node:assert';
 import {
   type EncryptionAlgorithm,
+  type FormFieldInfo,
+  type FormFieldValue,
   type PdfPermissions,
   deletePages,
   extractPages,
+  fillForm,
+  flattenForm,
   insertPages,
   mergePdfs,
   protectPdf,
+  readFormFields,
   reorderPages,
   rotatePages,
   splitPdf,
@@ -46,6 +51,49 @@ function forbiddenPermissions(
     }
   }
   return permissions;
+}
+
+/**
+ * Parse one repeated `--set name=value` pair.
+ *
+ * Only the first `=` splits, so a value may contain more of them. "true" and
+ * "false" become booleans because that is what a checkbox needs; everything
+ * else stays the string it was typed as.
+ */
+function collectFieldValue(
+  pair: string,
+  collected: Record<string, FormFieldValue>
+): Record<string, FormFieldValue> {
+  const split = pair.indexOf('=');
+  assert(split > 0, `--set needs field=value, got "${pair}"`);
+  const name = pair.slice(0, split);
+  const raw = pair.slice(split + 1);
+  const value = raw === 'true' ? true : raw === 'false' ? false : raw;
+  return { ...collected, [name]: value };
+}
+
+/** One field, described for someone reading a terminal. */
+function describeField(field: FormFieldInfo): string {
+  const parts = [`${field.name}  [${field.type}]`];
+  if (field.label !== field.name) {
+    parts.push(`  label: ${field.label}`);
+  }
+  if (field.pageNumber !== undefined) {
+    parts.push(`  page: ${field.pageNumber}`);
+  }
+  if (field.options !== undefined && field.options.length > 0) {
+    parts.push(
+      `  options: ${field.options.map((option) => option.value).join(', ')}`
+    );
+  }
+  const flags = [
+    field.required ? 'required' : undefined,
+    field.readOnly ? 'read only' : undefined,
+  ].filter((flag) => flag !== undefined);
+  if (flags.length > 0) {
+    parts.push(`  ${flags.join(', ')}`);
+  }
+  return parts.join('\n');
 }
 
 /** Attach the shared destination flags to a single-input command. */
@@ -295,6 +343,58 @@ export function buildProgram(): Command {
       );
     }
   );
+
+  program
+    .command('fields')
+    .description('list the form fields in a PDF')
+    .argument('<input>', 'PDF file to read')
+    .action(async (input: string) => {
+      const fields = await readFormFields(input);
+      if (fields.length === 0) {
+        process.stdout.write('This document has no form fields.\n');
+        return;
+      }
+      process.stdout.write(`${fields.map(describeField).join('\n\n')}\n`);
+    });
+
+  withDestination(
+    program
+      .command('fill')
+      .description('fill form fields by name')
+      .argument('<input>', 'PDF file to read')
+      .requiredOption(
+        '-s, --set <field=value>',
+        'set a field, repeat for each one; true and false set a checkbox',
+        collectFieldValue,
+        {}
+      )
+  ).action(
+    async (
+      input: string,
+      options: OutputOptions & { set: Record<string, FormFieldValue> }
+    ) => {
+      await writeResult(
+        input,
+        options.output,
+        options.inPlace === true,
+        (target) => fillForm(input, options.set, target)
+      );
+    }
+  );
+
+  withDestination(
+    program
+      .command('flatten')
+      .description('bake a form into the page, leaving it no longer editable')
+      .argument('<input>', 'PDF file to read')
+  ).action(async (input: string, options: OutputOptions) => {
+    await writeResult(
+      input,
+      options.output,
+      options.inPlace === true,
+      (target) => flattenForm(input, target)
+    );
+  });
 
   return program;
 }

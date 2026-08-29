@@ -17,3 +17,12 @@ export {
   protectPdfBytes,
 } from './protect.js';
 export { unlockPdfBytes } from './unlock.js';
+export {
+  type FormFieldInfo,
+  type FormFieldOption,
+  type FormFieldType,
+  type FormFieldValue,
+  fillFormBytes,
+  flattenFormBytes,
+  readFormFieldsBytes,
+} from './form.js';

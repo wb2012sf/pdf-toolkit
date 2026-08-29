@@ -12,3 +12,12 @@ export {
   protectPdf,
 } from './protect.js';
 export { unlockPdf } from './unlock.js';
+export {
+  type FormFieldInfo,
+  type FormFieldOption,
+  type FormFieldType,
+  type FormFieldValue,
+  fillForm,
+  flattenForm,
+  readFormFields,
+} from './form.js';

@@ -78,3 +78,55 @@ export async function pageSizesOf(path: string): Promise<PageSize[]> {
       ]
     );
 }
+
+/** The field values a filled form fixture is expected to carry. */
+export interface FormValues {
+  name: string;
+  agree: boolean;
+  country: string[];
+}
+
+/**
+ * A PDF carrying a text field, a checkbox and a dropdown, built with pdf-lib.
+ *
+ * Built by the other library on purpose. LibPDF then reads and fills a form it
+ * did not create, which is what a real document looks like, and pdf-lib reads
+ * the result back as an independent check.
+ */
+export async function makeFormPdf(): Promise<Uint8Array> {
+  const doc = await PDFDocument.create();
+  const page = doc.addPage([400, 400]);
+  const form = doc.getForm();
+
+  const name = form.createTextField('applicant.name');
+  name.setText('');
+  name.addToPage(page, { x: 20, y: 340, width: 200, height: 20 });
+
+  const agree = form.createCheckBox('agree');
+  agree.addToPage(page, { x: 20, y: 300, width: 15, height: 15 });
+
+  const country = form.createDropdown('country');
+  country.setOptions(['CH', 'DE', 'FR']);
+  country.addToPage(page, { x: 20, y: 260, width: 100, height: 20 });
+
+  return doc.save();
+}
+
+/** Read the fixture's field values back with pdf-lib, the independent check. */
+export async function formValuesOfBytes(
+  bytes: Uint8Array
+): Promise<FormValues> {
+  const form = (await PDFDocument.load(bytes)).getForm();
+  return {
+    name: form.getTextField('applicant.name').getText() ?? '',
+    agree: form.getCheckBox('agree').isChecked(),
+    country: form.getDropdown('country').getSelected(),
+  };
+}
+
+/** How many form fields pdf-lib can still see, which is 0 once flattened. */
+export async function formFieldCountOfBytes(
+  bytes: Uint8Array
+): Promise<number> {
+  return (await PDFDocument.load(bytes)).getForm().getFields().length;
+}
