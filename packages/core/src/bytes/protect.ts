@@ -1,5 +1,5 @@
-import { PDF } from '@libpdf/core';
 import { assert } from './assert.js';
+import { libpdf } from './libpdf.js';
 
 /** Encryption algorithms LibPDF can write. */
 export type EncryptionAlgorithm = 'RC4-40' | 'RC4-128' | 'AES-128' | 'AES-256';
@@ -115,6 +115,7 @@ export async function protectPdfBytes(
     }
   }
 
+  const { PDF } = await libpdf();
   const doc = await PDF.load(input);
 
   // Changing the protection on an already protected document needs owner

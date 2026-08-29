@@ -51,4 +51,28 @@ describe('the bytes layer stays free of Node builtins', () => {
 
     expect(offenders).toEqual([]);
   });
+
+  it('reaches LibPDF only through libpdf(), so it stays a lazy chunk', async () => {
+    // LibPDF is about twice the size of everything else here put together.
+    // One static import of it anywhere in this directory puts it back in the
+    // browser bundle's entry chunk, and a page that only merges two documents
+    // pays for encryption, forms and signing again. Nothing else would fail:
+    // the tests pass either way and only the built bundle grows, which is why
+    // this is checked here rather than left to notice later.
+    const files = (await readdir(BYTES_DIR)).filter(
+      (name) => name.endsWith('.ts') && name !== 'libpdf.ts'
+    );
+
+    const offenders: string[] = [];
+    for (const file of files) {
+      const source = await readFile(join(BYTES_DIR, file), 'utf8');
+      for (const match of source.matchAll(
+        /^import\s+(?!type\b)[^;]*?from '(@libpdf\/[^']+)'/gm
+      )) {
+        offenders.push(`${file} statically imports ${match[1]}`);
+      }
+    }
+
+    expect(offenders).toEqual([]);
+  });
 });

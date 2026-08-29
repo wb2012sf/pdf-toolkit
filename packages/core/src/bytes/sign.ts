@@ -1,5 +1,5 @@
-import { P12Signer, PDF } from '@libpdf/core';
 import { assert } from './assert.js';
+import { libpdf } from './libpdf.js';
 
 /** Something the signer noticed but carried on through. */
 export interface SignatureWarning {
@@ -97,6 +97,7 @@ export async function signPdfBytes(
   const { certificate, password, reason, location, contactInfo, fieldName } =
     options;
 
+  const { P12Signer, PDF } = await libpdf();
   const signer = await P12Signer.create(certificate, password);
   const doc = await PDF.load(input);
 

@@ -1,5 +1,13 @@
-import { type FormField, PDF, type PDFForm, type PdfRef } from '@libpdf/core';
+// Types only, erased at compile time, so they pull nothing into the bundle.
+// The values come from libpdf(), loaded on demand.
+import type {
+  FormField,
+  PDFForm,
+  PDF as PdfDocument,
+  PdfRef,
+} from '@libpdf/core';
 import { assert } from './assert.js';
+import { libpdf } from './libpdf.js';
 
 /** The kinds of field LibPDF reports. */
 export type FormFieldType =
@@ -59,6 +67,7 @@ export async function readFormFieldsBytes(
     'readFormFieldsBytes requires the document as a Uint8Array'
   );
 
+  const { PDF } = await libpdf();
   const doc = await PDF.load(input);
   const form = doc.getForm();
   if (form === null) {
@@ -152,6 +161,7 @@ export async function fillFormBytes(
     'fillFormBytes requires at least one field to fill'
   );
 
+  const { PDF } = await libpdf();
   const doc = await PDF.load(input);
   const form = requireForm(doc, 'fillFormBytes');
 
@@ -173,7 +183,7 @@ export async function fillFormBytes(
 }
 
 /** The document's form, or a clear refusal when it has none. */
-function requireForm(doc: PDF, caller: string): PDFForm {
+function requireForm(doc: PdfDocument, caller: string): PDFForm {
   const form = doc.getForm();
   assert(form !== null, `${caller}: this document has no form to work with`);
   return form;
@@ -192,6 +202,7 @@ export async function flattenFormBytes(input: Uint8Array): Promise<Uint8Array> {
     'flattenFormBytes requires the document as a Uint8Array'
   );
 
+  const { PDF } = await libpdf();
   const doc = await PDF.load(input);
   requireForm(doc, 'flattenFormBytes').flatten();
   return doc.save();

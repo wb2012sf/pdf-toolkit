@@ -532,6 +532,11 @@ is no page view to place it on.
 It is plain TypeScript with no UI framework: Vite is a dev dependency, so the
 shipped bundle contains the engine and nothing else.
 
+The engine ships in two pieces. The page operations load with the app, about
+456 kB. Encryption, forms and signing need the larger of the two PDF
+libraries, so that one is fetched the first time you use one of those four
+tabs and not before. Opening the app to merge two files never loads it.
+
 ### Building the installer
 
 `tauri:build` needs more than Node, because it compiles a Rust binary:

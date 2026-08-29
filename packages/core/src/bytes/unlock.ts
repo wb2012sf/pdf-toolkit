@@ -1,5 +1,5 @@
-import { PDF } from '@libpdf/core';
 import { assert } from './assert.js';
+import { libpdf } from './libpdf.js';
 
 /**
  * Remove password protection, given a password that opens the document.
@@ -29,6 +29,7 @@ export async function unlockPdfBytes(
     'unlockPdfBytes requires the password as a string'
   );
 
+  const { PDF } = await libpdf();
   const doc = await PDF.load(input, { credentials: password });
 
   assert(

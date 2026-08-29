@@ -30,6 +30,10 @@ served its purpose: v1 shipped, and LibPDF is now a dependency of
 - npm workspaces monorepo (`packages/core`, `packages/cli`)
 - Engines: `pdf-lib` for the page operations, `@libpdf/core` for encryption,
   forms and signing. One operation, one engine, never both in a file.
+  LibPDF is reached only through `bytes/libpdf.ts`, never imported statically,
+  so the browser bundle keeps it in a lazy chunk. A static import puts roughly
+  a megabyte back in the entry chunk and nothing else would fail, so
+  `bytes-purity.test.ts` guards it.
 - CLI: `commander`
 - Tests: `vitest`
 - Lint/format: Biome (single tool, single config, fast). Only add ESLint+Prettier
