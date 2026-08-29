@@ -58,6 +58,32 @@ describe('the page and the script agree on element ids', () => {
     expect(incomplete).toEqual([]);
   });
 
+  it('every tab has a panel, and the script knows every tab', async () => {
+    // show() hides `panel-${name}` for each name in OPERATIONS, so a tab with
+    // no panel does nothing when clicked and a panel absent from OPERATIONS
+    // is never hidden again once shown. Neither is visible from any other
+    // test, since nothing here runs a browser.
+    const script = await readFile(join(ROOT, 'src', 'main.ts'), 'utf8');
+    const html = await readFile(join(ROOT, 'index.html'), 'utf8');
+
+    const tabs = [...html.matchAll(/data-op="([^"]+)"/g)].map(
+      (match) => match[1] as string
+    );
+    const panels = [...html.matchAll(/id="panel-([^"]+)"/g)].map(
+      (match) => match[1] as string
+    );
+    const listed = (
+      script.match(/const OPERATIONS = \[([\s\S]*?)\] as const;/)?.[1] ?? ''
+    )
+      .split(',')
+      .map((entry) => entry.trim().replace(/^'|'$/g, ''))
+      .filter((entry) => entry.length > 0);
+
+    expect(tabs.length).toBeGreaterThan(0);
+    expect([...tabs].sort()).toEqual([...panels].sort());
+    expect([...listed].sort()).toEqual([...tabs].sort());
+  });
+
   it('the markup loads the script and the stylesheet', async () => {
     const html = await readFile(join(ROOT, 'index.html'), 'utf8');
 

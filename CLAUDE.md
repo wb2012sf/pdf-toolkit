@@ -193,7 +193,22 @@ a Windows runner instead, by hand or on a `v*` tag rather than per push, since
 Windows runner minutes are expensive. That job is the only automated check the
 Rust side gets.
 
-All seven operations are in the UI, one tab each. Split returns a zip, since
+Every operation is in the UI, one tab each: the seven page operations plus
+protect, unlock, form and sign. `test/wiring.test.ts` checks that the tabs,
+the panels and the `OPERATIONS` list in `main.ts` all agree, because a
+mismatch there does nothing visible until someone clicks the tab and no other
+test runs a browser.
+
+Two things about the newer tabs that are not obvious from the markup:
+- **Unlock passes `acceptUnreadable` to `createFileDrop`.** Every other zone
+  counts pages on drop, through pdf-lib, which refuses an encrypted document.
+  That check is what makes the other zones reject a protected file, and it is
+  exactly wrong for this one.
+- **The Form tab draws itself from `readFormFieldsBytes`.** Control choice and
+  value collection live in `src/formFields.ts` so they are tested without a
+  browser; `main.ts` only builds the elements.
+
+Split returns a zip, since
 a page cannot write a folder; under Tauri that becomes a native folder picker
 and the fflate dependency can go.
 

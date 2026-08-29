@@ -503,13 +503,31 @@ npm run tauri:dev     # the app, with the dev server behind it
 npm run tauri:build   # produces the installer
 ```
 
-All seven operations are there, one tab each. Merge takes several files:
-drop them on the page or pick them, reorder with the arrows or the sort
-buttons, name the output, merge. The rest take one file plus the same page
+Every operation is there, one tab each. Merge takes several files: drop them
+on the page or pick them, reorder with the arrows or the sort buttons, name
+the output, merge. The other page operations take one file plus the same page
 spec syntax the CLI uses, `1,3,5-7`.
 
-Split is the one that differs. A page cannot write a folder, so it hands back
-a single zip of the pages, named the same way the CLI names them.
+Four tabs behave differently enough to be worth describing:
+
+**Split** hands back a single zip of the pages rather than writing a folder,
+since a page cannot make one. They are named the same way the CLI names them.
+
+**Protect** shows every permission ticked, meaning allowed, and sends only the
+ones you untick. **Unlock** is the one tab that accepts a document the rest
+reject: every other drop zone refuses a file it cannot read, and a protected
+file is exactly what this one is for.
+
+**Form** builds itself from the document. Choose a PDF and its fields appear
+as ordinary controls, labelled the way the document labels them, with a
+dropdown wherever the field offers fixed choices. Fields that cannot be filled
+in, read only ones and signature fields, are listed with the reason rather
+than shown as inputs that would do nothing. There is a box to flatten
+afterwards.
+
+**Sign** needs a `.p12` or `.pfx` certificate as well as the PDF. The
+signature is invisible, for the same reason it is invisible in the CLI: there
+is no page view to place it on.
 
 It is plain TypeScript with no UI framework: Vite is a dev dependency, so the
 shipped bundle contains the engine and nothing else.

@@ -21,6 +21,10 @@
         <button type="button" data-op="reorder">Reorder</button>
         <button type="button" data-op="rotate">Rotate</button>
         <button type="button" data-op="extract">Extract</button>
+        <button type="button" data-op="protect">Protect</button>
+        <button type="button" data-op="unlock">Unlock</button>
+        <button type="button" data-op="form">Form</button>
+        <button type="button" data-op="sign">Sign</button>
       </nav>
 
       <!-- Merge: many files, order matters -->
@@ -197,6 +201,132 @@
           <label for="extract-output">Save as</label>
           <input type="text" id="extract-output" value="extract.pdf" />
           <button type="button" id="extract-run">Extract</button>
+        </div>
+      </section>
+
+      <!-- Protect -->
+      <section id="panel-protect" class="panel" hidden>
+        <p class="what">
+          Encrypt with a password. The contents are genuinely encrypted; the
+          permissions below are advisory and a reader may ignore them.
+        </p>
+        <div class="dropzone small" id="protect-zone">
+          <p>Drop a PDF here</p>
+          <p class="or">or</p>
+          <button type="button">Choose file</button>
+          <p class="chosen" hidden></p>
+          <input type="file" accept="application/pdf,.pdf" hidden />
+        </div>
+        <label class="field">
+          <span>Password to open the document</span>
+          <input type="password" id="protect-password" autocomplete="new-password" />
+        </label>
+        <label class="field">
+          <span>Owner password, to change the protection later (optional)</span>
+          <input type="password" id="protect-owner" autocomplete="new-password" />
+        </label>
+        <label class="field">
+          <span>Encryption</span>
+          <select id="protect-algorithm">
+            <option value="AES-256" selected>AES-256, strongest</option>
+            <option value="AES-128">AES-128</option>
+            <option value="RC4-128">RC4-128, for very old readers</option>
+            <option value="RC4-40">RC4-40, weakest</option>
+          </select>
+        </label>
+        <fieldset class="permissions">
+          <legend>Allow the reader to</legend>
+          <div id="protect-permissions" class="checkboxes"></div>
+        </fieldset>
+        <div class="actions">
+          <label for="protect-output">Save as</label>
+          <input type="text" id="protect-output" value="protected.pdf" />
+          <button type="button" id="protect-run">Protect</button>
+        </div>
+      </section>
+
+      <!-- Unlock -->
+      <section id="panel-unlock" class="panel" hidden>
+        <p class="what">
+          Remove password protection, given a password that opens the document.
+        </p>
+        <div class="dropzone small" id="unlock-zone">
+          <p>Drop a protected PDF here</p>
+          <p class="or">or</p>
+          <button type="button">Choose file</button>
+          <p class="chosen" hidden></p>
+          <input type="file" accept="application/pdf,.pdf" hidden />
+        </div>
+        <label class="field">
+          <span>Password</span>
+          <input type="password" id="unlock-password" autocomplete="current-password" />
+        </label>
+        <div class="actions">
+          <label for="unlock-output">Save as</label>
+          <input type="text" id="unlock-output" value="unlocked.pdf" />
+          <button type="button" id="unlock-run">Unlock</button>
+        </div>
+      </section>
+
+      <!-- Form -->
+      <section id="panel-form" class="panel" hidden>
+        <p class="what">
+          Fill in a form. Choose a PDF and its fields appear below, named the
+          way the document names them.
+        </p>
+        <div class="dropzone small" id="form-zone">
+          <p>Drop a PDF here</p>
+          <p class="or">or</p>
+          <button type="button">Choose file</button>
+          <p class="chosen" hidden></p>
+          <input type="file" accept="application/pdf,.pdf" hidden />
+        </div>
+        <p id="form-empty" class="empty">No file chosen yet.</p>
+        <div id="form-fields" class="fields"></div>
+        <label class="checkbox standalone">
+          <input type="checkbox" id="form-flatten" />
+          <span>Flatten afterwards, so the values can no longer be edited</span>
+        </label>
+        <div class="actions">
+          <label for="form-output">Save as</label>
+          <input type="text" id="form-output" value="filled.pdf" />
+          <button type="button" id="form-run" disabled>Fill form</button>
+        </div>
+      </section>
+
+      <!-- Sign -->
+      <section id="panel-sign" class="panel" hidden>
+        <p class="what">
+          Sign with a certificate. The signature is real but invisible: nothing
+          is drawn on the page, because placing it needs a page to point at.
+        </p>
+        <div class="dropzone small" id="sign-zone">
+          <p>Drop a PDF here</p>
+          <p class="or">or</p>
+          <button type="button">Choose file</button>
+          <p class="chosen" hidden></p>
+          <input type="file" accept="application/pdf,.pdf" hidden />
+        </div>
+        <label class="field">
+          <span>Certificate, a .p12 or .pfx file</span>
+          <input type="file" id="sign-certificate" accept=".p12,.pfx" />
+        </label>
+        <label class="field">
+          <span>Certificate password</span>
+          <input type="password" id="sign-password" autocomplete="current-password" />
+        </label>
+        <label class="field">
+          <span>Reason (optional)</span>
+          <input type="text" id="sign-reason" placeholder="I approve this document" />
+        </label>
+        <label class="field">
+          <span>Location (optional)</span>
+          <input type="text" id="sign-location" placeholder="Bern" />
+        </label>
+        <div class="actions">
+          <label for="sign-output">Save as</label>
+          <input type="text" id="sign-output" value="signed.pdf" />
+          <button type="button" id="sign-run">Sign</button>
         </div>
       </section>
 

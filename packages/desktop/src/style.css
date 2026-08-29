@@ -233,3 +233,51 @@ button:disabled {
 .status.error {
   color: var(--danger);
 }
+
+/* Permissions and generated form fields. Everything else on these panels
+   reuses .field, which the older panels already use, so they match without
+   restyling anything that was there before. */
+
+.permissions {
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--panel);
+  padding: 0.7rem 0.9rem;
+  margin: 0;
+}
+
+.permissions legend {
+  color: var(--muted);
+  padding: 0 0.3rem;
+}
+
+.checkboxes {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
+  gap: 0.3rem 1rem;
+}
+
+.checkbox {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+.checkbox.standalone {
+  padding: 0.2rem 0;
+}
+
+.fields {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.fields:empty {
+  display: none;
+}
+
+.muted {
+  color: var(--muted);
+  font-size: 0.85rem;
+  font-style: normal;
+}

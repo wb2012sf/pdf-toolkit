@@ -1,13 +1,21 @@
 import {
+  type EncryptionAlgorithm,
+  type FormFieldInfo,
   deletePagesBytes,
   extractPagesBytes,
+  fillFormBytes,
+  flattenFormBytes,
   insertPagesBytes,
   mergePdfBytes,
   pageFileName,
   parsePageSpec,
+  protectPdfBytes,
+  readFormFieldsBytes,
   reorderPagesBytes,
   rotatePagesBytes,
+  signPdfBytes,
   splitPdfBytes,
+  unlockPdfBytes,
 } from '@pdf-toolkit/core/bytes';
 import { type SingleFileDrop, createFileDrop } from './fileDrop.js';
 import {
@@ -19,7 +27,15 @@ import {
   stemOf,
   suggestOutputName,
 } from './fileList.js';
+import {
+  type ControlState,
+  collectValues,
+  controlFor,
+  labelFor,
+  whyNotEditable,
+} from './formFields.js';
 import { describeSkipped, partitionPdfs } from './pdfFiles.js';
+import { PERMISSION_LABELS, forbiddenPermissions } from './permissions.js';
 import { PDF, ZIP, buildZip, saveBytes, withExtension } from './save.js';
 
 /**
@@ -88,6 +104,10 @@ const OPERATIONS = [
   'reorder',
   'rotate',
   'extract',
+  'protect',
+  'unlock',
+  'form',
+  'sign',
 ] as const;
 
 function show(operation: string): void {
@@ -508,6 +528,273 @@ extractRun.addEventListener(
       return written === undefined
         ? 'Save cancelled.'
         : `Extracted ${pages.length} page(s), saved as ${written}.`;
+    })
+);
+
+// --- protect ---------------------------------------------------------------
+
+const protectFile = createFileDrop('protect-zone', (_file, note, isError) => {
+  protectOutput.value = `${stemOf(
+    nameOf(protectFile, 'document')
+  )}-protected.pdf`;
+  say(note, isError);
+});
+const protectPassword = element<HTMLInputElement>('protect-password');
+const protectOwner = element<HTMLInputElement>('protect-owner');
+const protectAlgorithm = element<HTMLSelectElement>('protect-algorithm');
+const protectOutput = element<HTMLInputElement>('protect-output');
+const protectRun = element<HTMLButtonElement>('protect-run');
+
+/** One box per permission, ticked, since a document starts unrestricted. */
+const permissionBoxes = new Map<string, HTMLInputElement>();
+for (const [name, label] of PERMISSION_LABELS) {
+  const wrapper = document.createElement('label');
+  wrapper.className = 'checkbox';
+  const box = document.createElement('input');
+  box.type = 'checkbox';
+  box.checked = true;
+  const text = document.createElement('span');
+  text.textContent = label;
+  wrapper.append(box, text);
+  element<HTMLElement>('protect-permissions').append(wrapper);
+  permissionBoxes.set(name, box);
+}
+
+protectRun.addEventListener(
+  'click',
+  () =>
+    void run(protectRun, async () => {
+      const bytes = requireFile(protectFile, 'a PDF');
+      const allowed = new Map(
+        PERMISSION_LABELS.map(([name]): [typeof name, boolean] => [
+          name,
+          permissionBoxes.get(name)?.checked !== false,
+        ])
+      );
+      const result = await protectPdfBytes(bytes, {
+        ...(protectPassword.value.length === 0
+          ? {}
+          : { userPassword: protectPassword.value }),
+        ...(protectOwner.value.length === 0
+          ? {}
+          : { ownerPassword: protectOwner.value }),
+        algorithm: protectAlgorithm.value as EncryptionAlgorithm,
+        permissions: forbiddenPermissions(allowed),
+      });
+      const written = await saveBytes(
+        result,
+        withExtension(protectOutput.value, '.pdf'),
+        PDF
+      );
+      return written === undefined
+        ? 'Save cancelled.'
+        : `Protected, saved as ${written}. Keep the password: without it this file cannot be opened again.`;
+    })
+);
+
+// --- unlock ----------------------------------------------------------------
+
+// This zone accepts documents pdf-lib cannot open, because that is the point
+// of it. Every other zone rejects them.
+const unlockFile = createFileDrop(
+  'unlock-zone',
+  (_file, note, isError) => {
+    unlockOutput.value = `${stemOf(
+      nameOf(unlockFile, 'document')
+    )}-unlocked.pdf`;
+    say(note, isError);
+  },
+  { acceptUnreadable: true }
+);
+const unlockPassword = element<HTMLInputElement>('unlock-password');
+const unlockOutput = element<HTMLInputElement>('unlock-output');
+const unlockRun = element<HTMLButtonElement>('unlock-run');
+
+unlockRun.addEventListener(
+  'click',
+  () =>
+    void run(unlockRun, async () => {
+      const bytes = requireFile(unlockFile, 'a protected PDF');
+      const result = await unlockPdfBytes(bytes, unlockPassword.value);
+      const written = await saveBytes(
+        result,
+        withExtension(unlockOutput.value, '.pdf'),
+        PDF
+      );
+      return written === undefined
+        ? 'Save cancelled.'
+        : `Unlocked, saved as ${written}.`;
+    })
+);
+
+// --- form ------------------------------------------------------------------
+
+const formFile = createFileDrop('form-zone', (file, note, isError) => {
+  formOutput.value = `${stemOf(nameOf(formFile, 'document'))}-filled.pdf`;
+  say(note, isError);
+  if (file !== undefined) {
+    void loadFormFields(file.bytes);
+  }
+});
+const formFieldsBox = element<HTMLElement>('form-fields');
+const formEmpty = element<HTMLParagraphElement>('form-empty');
+const formFlatten = element<HTMLInputElement>('form-flatten');
+const formOutput = element<HTMLInputElement>('form-output');
+const formRun = element<HTMLButtonElement>('form-run');
+
+let formFields: FormFieldInfo[] = [];
+/** How to read the control standing in for each editable field. */
+const formControls = new Map<string, () => ControlState>();
+
+/**
+ * Build one control per field.
+ *
+ * This is the whole reason form filling works with no page view: the fields
+ * describe themselves well enough to draw an ordinary web form from them.
+ */
+function renderFormFields(): void {
+  formFieldsBox.replaceChildren();
+  formControls.clear();
+
+  for (const field of formFields) {
+    const row = document.createElement('label');
+    row.className = 'field';
+    const caption = document.createElement('span');
+    caption.textContent = `${labelFor(field)}${field.required ? ' *' : ''}`;
+    row.append(caption);
+
+    const kind = controlFor(field);
+    if (kind === undefined) {
+      const note = document.createElement('em');
+      note.className = 'muted';
+      note.textContent = whyNotEditable(field) ?? '';
+      row.append(note);
+      formFieldsBox.append(row);
+      continue;
+    }
+
+    if (kind === 'checkbox') {
+      const box = document.createElement('input');
+      box.type = 'checkbox';
+      // Anything but the PDF's "off" state counts as ticked.
+      box.checked = field.value === true || field.value === 'Yes';
+      row.append(box);
+      formControls.set(field.name, () => box.checked);
+    } else if (kind === 'choice' && field.options !== undefined) {
+      const select = document.createElement('select');
+      const blank = document.createElement('option');
+      blank.value = '';
+      blank.textContent = '(none)';
+      select.append(blank);
+      for (const option of field.options) {
+        const item = document.createElement('option');
+        item.value = option.value;
+        item.textContent = option.display;
+        select.append(item);
+      }
+      select.value = typeof field.value === 'string' ? field.value : '';
+      row.append(select);
+      formControls.set(field.name, () => select.value);
+    } else {
+      const input = document.createElement('input');
+      input.type = 'text';
+      input.value = typeof field.value === 'string' ? field.value : '';
+      row.append(input);
+      formControls.set(field.name, () => input.value);
+    }
+
+    formFieldsBox.append(row);
+  }
+
+  formEmpty.hidden = formFields.length > 0;
+  formEmpty.textContent =
+    formFields.length > 0 ? '' : 'This document has no form fields.';
+  formRun.disabled = formControls.size === 0;
+}
+
+async function loadFormFields(bytes: Uint8Array): Promise<void> {
+  try {
+    formFields = await readFormFieldsBytes(bytes);
+  } catch {
+    formFields = [];
+  }
+  renderFormFields();
+}
+
+formRun.addEventListener(
+  'click',
+  () =>
+    void run(formRun, async () => {
+      const bytes = requireFile(formFile, 'a PDF');
+      const held = new Map<string, ControlState>();
+      for (const [name, read] of formControls) {
+        held.set(name, read());
+      }
+      const filled = await fillFormBytes(
+        bytes,
+        collectValues(formFields, held)
+      );
+      const result = formFlatten.checked
+        ? await flattenFormBytes(filled)
+        : filled;
+      const written = await saveBytes(
+        result,
+        withExtension(formOutput.value, '.pdf'),
+        PDF
+      );
+      if (written === undefined) {
+        return 'Save cancelled.';
+      }
+      return formFlatten.checked
+        ? `Filled and flattened, saved as ${written}.`
+        : `Filled ${formControls.size} field(s), saved as ${written}.`;
+    })
+);
+
+// --- sign ------------------------------------------------------------------
+
+const signFile = createFileDrop('sign-zone', (_file, note, isError) => {
+  signOutput.value = `${stemOf(nameOf(signFile, 'document'))}-signed.pdf`;
+  say(note, isError);
+});
+const signCertificate = element<HTMLInputElement>('sign-certificate');
+const signPassword = element<HTMLInputElement>('sign-password');
+const signReason = element<HTMLInputElement>('sign-reason');
+const signLocation = element<HTMLInputElement>('sign-location');
+const signOutput = element<HTMLInputElement>('sign-output');
+const signRun = element<HTMLButtonElement>('sign-run');
+
+signRun.addEventListener(
+  'click',
+  () =>
+    void run(signRun, async () => {
+      const bytes = requireFile(signFile, 'a PDF');
+      const chosen = signCertificate.files?.[0];
+      if (chosen === undefined) {
+        throw new Error('Choose a .p12 or .pfx certificate first.');
+      }
+      const signed = await signPdfBytes(bytes, {
+        certificate: new Uint8Array(await chosen.arrayBuffer()),
+        password: signPassword.value,
+        ...(signReason.value.length === 0 ? {} : { reason: signReason.value }),
+        ...(signLocation.value.length === 0
+          ? {}
+          : { location: signLocation.value }),
+      });
+      const written = await saveBytes(
+        signed.bytes,
+        withExtension(signOutput.value, '.pdf'),
+        PDF
+      );
+      if (written === undefined) {
+        return 'Save cancelled.';
+      }
+      // Signing can succeed and still have something to say, so say it.
+      const said =
+        signed.warnings.length === 0
+          ? ''
+          : ` ${signed.warnings.map((warning) => warning.message).join(' ')}`;
+      return `Signed, saved as ${written}.${said}`;
     })
 );
 

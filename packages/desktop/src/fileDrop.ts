@@ -18,6 +18,18 @@ export interface SingleFileDrop {
   clear(): void;
 }
 
+/** How a zone should behave towards a file the engine cannot open. */
+export interface FileDropOptions {
+  /**
+   * Accept a PDF whose pages cannot be counted.
+   *
+   * Page counting goes through pdf-lib, which refuses an encrypted document.
+   * That is the right answer for every zone except Unlock, where a protected
+   * file is exactly what is expected, so that one turns this on.
+   */
+  acceptUnreadable?: boolean;
+}
+
 /** Wire the zone with this id. The markup lives in index.html. */
 export function createFileDrop(
   zoneId: string,
@@ -25,7 +37,8 @@ export function createFileDrop(
     file: PickedFile | undefined,
     note: string,
     isError?: boolean
-  ) => void
+  ) => void,
+  options: FileDropOptions = {}
 ): SingleFileDrop {
   const found = document.getElementById(zoneId);
   if (found === null) {
@@ -56,7 +69,7 @@ export function createFileDrop(
     const pages =
       pageCount === undefined
         ? ''
-        : ` — ${pageCount} ${pageCount === 1 ? 'page' : 'pages'}`;
+        : `, ${pageCount} ${pageCount === 1 ? 'page' : 'pages'}`;
     chosen.textContent = picked === undefined ? '' : `${picked.name}${pages}`;
     chosen.hidden = picked === undefined;
     zone.classList.toggle('filled', picked !== undefined);
@@ -77,16 +90,21 @@ export function createFileDrop(
     // valid range is visible before anyone types a page number into it. It
     // doubles as a check that the file is a PDF the engine can actually
     // open, which catches an encrypted one here instead of at the end.
-    let count: number;
+    let count: number | undefined;
     try {
       count = await pageCountOf(bytes);
     } catch {
-      onChange(
-        picked,
-        `${first.name} could not be read. It may be damaged, or encrypted, which is not supported.`,
-        true
-      );
-      return;
+      if (options.acceptUnreadable !== true) {
+        onChange(
+          picked,
+          `${first.name} could not be read. It may be damaged, or password protected, in which case the Unlock tab can open it.`,
+          true
+        );
+        return;
+      }
+      // Expected on this zone: a protected document is the point of it, and
+      // the password decides whether it really opens, not this check.
+      count = undefined;
     }
 
     picked = { name: first.name, bytes };
