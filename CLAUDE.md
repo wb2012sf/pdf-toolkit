@@ -129,8 +129,10 @@ Things that only show up in the built app, never in `npm run dev`:
   separate smoke step; keep it if the workflow is ever rewritten.
 
 ## Next up
-Not started, and explicitly out of scope for v1: the web app and the Tauri
-desktop app.
+Both of these were out of scope for v1. The Tauri desktop app has since been
+built and shipped, and the rest of this section records how. The web app has
+not been built, and it is optional rather than a prerequisite; see the note
+further down. Nothing here is scheduled, so treat new work as new scope.
 
 ### The bytes layer is done
 Core used to be filesystem only, which would have blocked both front ends: a
@@ -149,7 +151,8 @@ import { mergePdfBytes, splitPdfBytes } from '@pdf-toolkit/core/bytes';
 `pageFileName` is exported alongside them so a browser download names split
 pages exactly as the CLI does.
 
-What is left for the desktop app, in order:
+The desktop app was planned in three steps. The first two are done and the
+third is deferred, so nothing here is outstanding:
 1. ~~A UI against the bytes layer.~~ Done: `packages/desktop` is a merge
    screen, `npm run dev` to work on it. Vanilla TypeScript deliberately, so
    the shipped bundle carries no framework; ordering logic lives in
@@ -161,7 +164,17 @@ What is left for the desktop app, in order:
    file that knows the difference.
 3. Command line mode in the same binary, so `pdf-toolkit merge ...` still
    works for anyone who prefers typing. Tauri v2 has a CLI plugin for
-   parsing the arguments.
+   parsing the arguments. **Deferred on 2026-08-29, no date to revisit.** The
+   Node CLI in `packages/cli` already covers the actual use, so the only gain
+   would be dropping the Node prerequisite, and that did not justify two
+   costs. The engine is JavaScript in the webview and there must never be a
+   second copy of it in Rust, so this mode would have to boot a hidden webview
+   to do the work. Worse, `main.rs` sets `windows_subsystem = "windows"` in
+   release builds, so the process has no console and anything it prints is
+   lost in PowerShell; the ways round that (AttachConsole, a separate console
+   shim next to the GUI binary, or exit codes only) each cost something and
+   none have been tried on Windows. Settle that behaviour on Windows first if
+   this is ever picked up.
 
 The shell cannot be built on this VPS: no Rust toolchain, no webview
 libraries, no passwordless sudo. The **Desktop build** workflow compiles it on
