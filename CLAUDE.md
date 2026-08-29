@@ -279,9 +279,53 @@ Three things that follow from that run:
 - **Certificate based encryption is unsupported.** Password encryption only.
 - **LibPDF is 0.4.1.** Pre-1.0 is the real risk here, not capability.
 
-### Open question before any of this starts
+### pdf-lib or LibPDF: decided on 2026-08-29
 LibPDF also does merge and split, so it could replace pdf-lib outright rather
-than sit beside it. Running both means every document is parsed twice by two
-libraries that can disagree about a damaged file. Decide which way before
-writing the first wrapper, because it determines whether v2 is an addition or
-a migration.
+than sit beside it. **Decision: LibPDF is the designated successor. New v2 work
+goes on it. The seven existing operations stay on pdf-lib for now.**
+
+The fact that forced the question: **pdf-lib is abandoned.** Version 1.17.1,
+last published 2021-11-06, nearly five years without a release, still pulling
+`pako@^1`. Staying on it forever was never the safe option, only the quiet one.
+It works and `npm audit` is clean today, but nothing will be fixed if that
+changes.
+
+What argues against migrating the seven right now:
+- **Adoption.** pdf-lib had 48.4M downloads last month against LibPDF's 480k.
+  pdf-lib is abandoned but it has been beaten against a decade of real world
+  broken PDFs. LibPDF has months. The fixtures here are synthetic and cannot
+  see that difference, which matters because the CLI gets pointed at whatever
+  a scanner produced.
+- **LibPDF is 0.4.1**, with 0.3.6 to 0.4.1 inside a few weeks. Pre-1.0 minor
+  bumps are allowed to break, so migrating now risks migrating twice.
+- **No user visible benefit.** The seven work. Migration spends risk to deliver
+  nothing.
+- **No evidence yet.** Nothing has shipped on LibPDF here. Encryption and form
+  filling are the trial: they need it anyway, and they will show how it behaves
+  on real documents before the whole engine depends on it.
+
+Compatibility is not among the objections. Checked directly: LibPDF reads a
+pdf-lib fixture with page sizes intact, a LibPDF merge preserves order and
+sizes and reads back correctly in pdf-lib, both agree the hand rolled zero page
+PDF has zero pages, and both re-save the same fixture to the same 605 bytes.
+LibPDF also has no `node:` imports anywhere in its dist, so it can live in the
+bytes layer without tripping `bytes-purity.test.ts`.
+
+**Migrate the seven when LibPDF reaches 1.0**, or sooner if pdf-lib draws a
+CVE. Review once two v2 features have shipped on it either way.
+
+Two rules while both are present:
+- **One operation, one engine.** Never import both in the same bytes layer
+  file. An operation that needs both is the argument that it is time to
+  migrate.
+- **Keep pdf-lib as the test oracle**, even after a migration. `helpers.ts`
+  verifies output by loading it with pdf-lib, so today the engine and the
+  verifier are different libraries and a passing test means something. Move the
+  helpers too and LibPDF marks its own homework: a bug in its page tree could
+  produce output its own reader calls correct. Keeping pdf-lib as a
+  devDependency for that is cheap and worth it.
+
+An earlier draft of this file claimed that running both means every document is
+parsed twice by libraries that might disagree. That was wrong. Each operation
+loads one library, so nothing is parsed twice in a single flow. The real costs
+of running both are bundle size and two mental models.
