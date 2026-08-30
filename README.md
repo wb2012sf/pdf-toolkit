@@ -383,8 +383,15 @@ pdf-toolkit extract book.pdf -p 2-5 -o chapter.pdf
 ### protect and unlock
 
 Encrypts with AES-256 unless told otherwise. Give a user password, an owner
-password, or both: the user password is needed to open the document at all,
-the owner password is what lets the protection be changed later.
+password, or both. The user password is needed to open the document at all.
+The owner password grants full rights, lifting the permission restrictions
+for whoever holds it, so setting only an owner password gives a file anyone
+can open but not, say, copy text out of.
+
+Note what neither password does here: `protect` refuses a document that is
+already protected. To change protection, `unlock` it and protect it again.
+Changing it in place is a thing PDF allows and this tool deliberately does
+not, so that nothing silently re-encrypts a file.
 
 ```bash
 pdf-toolkit protect tax.pdf -p hunter2 -o tax-locked.pdf

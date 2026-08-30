@@ -31,6 +31,7 @@ import {
   type ControlState,
   collectValues,
   controlFor,
+  displayValue,
   labelFor,
   whyNotEditable,
 } from './formFields.js';
@@ -646,6 +647,14 @@ let formFields: FormFieldInfo[] = [];
 /** How to read the control standing in for each editable field. */
 const formControls = new Map<string, () => ControlState>();
 
+/** A field's current value as text a control can hold. */
+function firstString(value: unknown): string {
+  if (Array.isArray(value)) {
+    return typeof value[0] === 'string' ? value[0] : '';
+  }
+  return typeof value === 'string' ? value : '';
+}
+
 /**
  * Build one control per field.
  *
@@ -664,11 +673,19 @@ function renderFormFields(): void {
     row.append(caption);
 
     const kind = controlFor(field);
+
+    // No control does not mean nothing to show. A read only field usually
+    // carries the value that matters most on the form, so it is displayed
+    // rather than reduced to the word "read only".
     if (kind === undefined) {
+      const shown = document.createElement('input');
+      shown.type = 'text';
+      shown.value = displayValue(field);
+      shown.disabled = true;
       const note = document.createElement('em');
       note.className = 'muted';
       note.textContent = whyNotEditable(field) ?? '';
-      row.append(note);
+      row.append(shown, note);
       formFieldsBox.append(row);
       continue;
     }
@@ -676,29 +693,97 @@ function renderFormFields(): void {
     if (kind === 'checkbox') {
       const box = document.createElement('input');
       box.type = 'checkbox';
-      // Anything but the PDF's "off" state counts as ticked.
-      box.checked = field.value === true || field.value === 'Yes';
+      // A checkbox stores "Off" when clear; anything else counts as ticked.
+      box.checked = field.value !== 'Off' && field.value !== false;
       row.append(box);
       formControls.set(field.name, () => box.checked);
-    } else if (kind === 'choice' && field.options !== undefined) {
+    } else if (kind === 'radio') {
+      // A radio group is several inputs sharing a name, not a dropdown.
+      const group = document.createElement('span');
+      group.className = 'radios';
+      const chosen = typeof field.value === 'string' ? field.value : '';
+      for (const option of field.options ?? []) {
+        const item = document.createElement('label');
+        item.className = 'radio';
+        const button = document.createElement('input');
+        button.type = 'radio';
+        button.name = `radio-${field.name}`;
+        button.value = option.value;
+        button.checked = option.value === chosen;
+        const caption = document.createElement('span');
+        // display is the readable wording; value is what gets stored.
+        caption.textContent = option.display;
+        item.append(button, caption);
+        group.append(item);
+      }
+      row.append(group);
+      formControls.set(field.name, () => {
+        const picked = group.querySelector<HTMLInputElement>(
+          'input[type="radio"]:checked'
+        );
+        return picked?.value ?? '';
+      });
+    } else if (kind === 'multiselect') {
+      const select = document.createElement('select');
+      select.multiple = true;
+      select.size = Math.min(6, Math.max(3, field.options?.length ?? 3));
+      const chosen = new Set(Array.isArray(field.value) ? field.value : []);
+      for (const option of field.options ?? []) {
+        const item = document.createElement('option');
+        item.value = option.value;
+        item.textContent = option.display;
+        item.selected = chosen.has(option.value);
+        select.append(item);
+      }
+      row.append(select);
+      formControls.set(field.name, () =>
+        Array.from(select.selectedOptions).map((option) => option.value)
+      );
+    } else if (kind === 'select') {
       const select = document.createElement('select');
       const blank = document.createElement('option');
       blank.value = '';
       blank.textContent = '(none)';
       select.append(blank);
-      for (const option of field.options) {
+      for (const option of field.options ?? []) {
         const item = document.createElement('option');
         item.value = option.value;
         item.textContent = option.display;
         select.append(item);
       }
-      select.value = typeof field.value === 'string' ? field.value : '';
+      select.value = firstString(field.value);
       row.append(select);
       formControls.set(field.name, () => select.value);
-    } else {
+    } else if (kind === 'combo') {
+      // Editable: the listed options are suggestions, not the only answers,
+      // so this is a text box with a datalist rather than a select.
       const input = document.createElement('input');
       input.type = 'text';
-      input.value = typeof field.value === 'string' ? field.value : '';
+      input.value = firstString(field.value);
+      const list = document.createElement('datalist');
+      list.id = `options-${field.name}`;
+      for (const option of field.options ?? []) {
+        const item = document.createElement('option');
+        item.value = option.value;
+        list.append(item);
+      }
+      input.setAttribute('list', list.id);
+      row.append(input, list);
+      formControls.set(field.name, () => input.value);
+    } else {
+      const input = document.createElement(
+        kind === 'textarea' ? 'textarea' : 'input'
+      ) as HTMLInputElement | HTMLTextAreaElement;
+      if (input instanceof HTMLInputElement) {
+        input.type = 'text';
+      } else {
+        input.rows = 3;
+      }
+      input.value = firstString(field.value);
+      // A form asking for four digits says so, and the box should hold to it.
+      if (field.maxLength !== undefined) {
+        input.maxLength = field.maxLength;
+      }
       row.append(input);
       formControls.set(field.name, () => input.value);
     }

@@ -51,6 +51,19 @@ export interface FormFieldInfo {
   options?: FormFieldOption[];
   /** Which page the field appears on, 1-based, when it is placed at all. */
   pageNumber?: number;
+  /**
+   * Text fields: the most characters accepted, when the field says.
+   *
+   * A form that asks for a four digit PIN records that here, and a caller
+   * that ignores it lets someone type six and find out later.
+   */
+  maxLength?: number;
+  /** Text fields: the field takes more than one line. */
+  multiline: boolean;
+  /** Dropdowns: a value not in the list is allowed. */
+  editable: boolean;
+  /** Listboxes: more than one option can be chosen at once. */
+  multiSelect: boolean;
 }
 
 /**
@@ -79,6 +92,8 @@ export async function readFormFieldsBytes(
   return form.getFields().map((field): FormFieldInfo => {
     const options = readOptions(field);
     const pageNumber = readPageNumber(field, pageRefs);
+    const kind = field as Partial<KindSpecific>;
+    const maxLength = kind.maxLength;
     return {
       name: field.name,
       type: field.type,
@@ -87,19 +102,37 @@ export async function readFormFieldsBytes(
       value: field.getValue() as FormFieldValue,
       readOnly: field.isReadOnly(),
       required: field.isRequired(),
+      // A field that states no limit reports 0, which is not a limit of zero.
+      ...(maxLength === undefined || maxLength <= 0 ? {} : { maxLength }),
+      multiline: kind.isMultiline === true,
+      editable: kind.isEditable === true,
+      multiSelect: kind.isMultiSelect === true,
       ...(options === undefined ? {} : { options }),
       ...(pageNumber === undefined ? {} : { pageNumber }),
     };
   });
 }
 
-/** Only some field kinds offer a fixed set of choices, so this is a guard. */
-interface OffersOptions {
+/**
+ * Properties only some field kinds carry.
+ *
+ * Every one is read defensively rather than by narrowing on `type`, because
+ * a field kind that does not have them simply leaves them undefined, and that
+ * is exactly the answer wanted.
+ */
+interface KindSpecific {
+  maxLength: number;
+  isMultiline: boolean;
+  isEditable: boolean;
+  isMultiSelect: boolean;
   getOptions: () => (string | FormFieldOption)[];
+  getExportValues: () => string[];
 }
 
-function offersOptions(field: FormField): field is FormField & OffersOptions {
-  return typeof (field as Partial<OffersOptions>).getOptions === 'function';
+function offersOptions(
+  field: FormField
+): field is FormField & Pick<KindSpecific, 'getOptions'> {
+  return typeof (field as Partial<KindSpecific>).getOptions === 'function';
 }
 
 /** The fixed choices a field offers, for the kinds of field that offer any. */
@@ -107,12 +140,26 @@ function readOptions(field: FormField): FormFieldOption[] | undefined {
   if (!offersOptions(field)) {
     return undefined;
   }
-  // Choice fields give {value, display}; a radio group gives plain strings.
-  return field
-    .getOptions()
-    .map((option) =>
-      typeof option === 'string' ? { value: option, display: option } : option
-    );
+
+  const raw = field.getOptions();
+
+  // A radio group is the awkward one. getOptions() gives the widget
+  // appearance state names, frequently just "0" and "1", and those are what
+  // the field actually stores and what fill() accepts. The export values are
+  // the wording a person should see. So they are paired rather than swapped:
+  // value is what gets written, display is what gets shown.
+  const exported = (field as Partial<KindSpecific>).getExportValues?.();
+  const labels =
+    exported !== undefined && exported.length === raw.length
+      ? exported
+      : undefined;
+
+  // Choice fields already give {value, display}; a radio gives plain strings.
+  return raw.map((option, index) =>
+    typeof option === 'string'
+      ? { value: option, display: labels?.[index] ?? option }
+      : option
+  );
 }
 
 /**

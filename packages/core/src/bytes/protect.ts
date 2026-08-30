@@ -45,7 +45,13 @@ const PERMISSION_NAMES: readonly (keyof PdfPermissions)[] = [
 export interface ProtectOptions {
   /** Required to open the document at all. */
   userPassword?: string;
-  /** Grants full access and is required to change the protection later. */
+  /**
+   * Grants full rights, lifting the permissions below for whoever has it.
+   *
+   * In a PDF it is also what authorises changing the protection in place, but
+   * this package never does that: protecting an already protected document is
+   * refused, so the way to change it here is unlock and then protect again.
+   */
   ownerPassword?: string;
   /** Permissions to forbid. Anything not named stays allowed. */
   permissions?: Partial<PdfPermissions>;

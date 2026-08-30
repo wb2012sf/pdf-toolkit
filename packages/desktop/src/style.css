@@ -281,3 +281,25 @@ button:disabled {
   font-size: 0.85rem;
   font-style: normal;
 }
+
+.radios {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.2rem 1rem;
+}
+
+.radios .radio {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.fields textarea {
+  font: inherit;
+  min-height: 4.5rem;
+  resize: vertical;
+}
+
+.fields input:disabled {
+  color: var(--muted);
+}

@@ -130,3 +130,56 @@ export async function formFieldCountOfBytes(
 ): Promise<number> {
   return (await PDFDocument.load(bytes)).getForm().getFields().length;
 }
+
+/**
+ * A PDF covering the field varieties a real form uses.
+ *
+ * The simpler fixture above is three plain fields. This one exists because
+ * every one of these was missed the first time: a length limit, a multiline
+ * box, a read only field carrying a value, a combo box that accepts a value
+ * of its own, a listbox taking several answers, and a radio group.
+ */
+export async function makeVariedFormPdf(): Promise<Uint8Array> {
+  const doc = await PDFDocument.create();
+  const page = doc.addPage([500, 700]);
+  const form = doc.getForm();
+
+  const pin = form.createTextField('pin');
+  pin.setMaxLength(4);
+  pin.addToPage(page, { x: 20, y: 640, width: 80, height: 18 });
+
+  const comments = form.createTextField('comments');
+  comments.enableMultiline();
+  comments.addToPage(page, { x: 20, y: 560, width: 300, height: 60 });
+
+  const reference = form.createTextField('reference');
+  reference.setText('PRE-FILLED-123');
+  reference.enableReadOnly();
+  reference.addToPage(page, { x: 20, y: 520, width: 200, height: 18 });
+
+  const city = form.createDropdown('city');
+  city.setOptions(['Bern', 'Zurich']);
+  city.enableEditing();
+  city.addToPage(page, { x: 20, y: 470, width: 150, height: 18 });
+
+  const hobbies = form.createOptionList('hobbies');
+  hobbies.setOptions(['Chess', 'Hiking', 'Reading']);
+  hobbies.enableMultiselect();
+  hobbies.addToPage(page, { x: 20, y: 380, width: 150, height: 70 });
+
+  const contact = form.createRadioGroup('contact');
+  contact.addOptionToPage('Email', page, {
+    x: 20,
+    y: 340,
+    width: 14,
+    height: 14,
+  });
+  contact.addOptionToPage('Phone', page, {
+    x: 20,
+    y: 315,
+    width: 14,
+    height: 14,
+  });
+
+  return doc.save();
+}

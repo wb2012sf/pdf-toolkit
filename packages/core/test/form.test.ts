@@ -13,6 +13,7 @@ import {
   formValuesOfBytes,
   makeFormPdf,
   makeTestPdf,
+  makeVariedFormPdf,
 } from './helpers.js';
 
 describe('readFormFieldsBytes', () => {
@@ -191,5 +192,79 @@ describe('the filesystem wrappers', () => {
     await expect(fillForm(source, { agree: true }, source)).rejects.toThrow(
       /refuses to overwrite an input file/
     );
+  });
+});
+
+describe('the field varieties a real form uses', () => {
+  async function fieldNamed(name: string) {
+    const fields = await readFormFieldsBytes(await makeVariedFormPdf());
+    const found = fields.find((field) => field.name === name);
+    expect(found, `no field called ${name}`).toBeDefined();
+    return found as NonNullable<typeof found>;
+  }
+
+  it('reports a length limit, so a PIN box can enforce four digits', async () => {
+    expect((await fieldNamed('pin')).maxLength).toBe(4);
+  });
+
+  it('leaves maxLength off a field that states no limit', async () => {
+    // Fields report 0 for "no limit", which is not a limit of zero.
+    expect((await fieldNamed('comments')).maxLength).toBeUndefined();
+  });
+
+  it('reports a multiline field, which needs more than one line of box', async () => {
+    expect((await fieldNamed('comments')).multiline).toBe(true);
+    expect((await fieldNamed('pin')).multiline).toBe(false);
+  });
+
+  it('keeps the value of a read only field, so it can still be shown', async () => {
+    const reference = await fieldNamed('reference');
+
+    expect(reference.readOnly).toBe(true);
+    expect(reference.value).toBe('PRE-FILLED-123');
+  });
+
+  it('reports a combo box that accepts a value of its own', async () => {
+    expect((await fieldNamed('city')).editable).toBe(true);
+  });
+
+  it('reports a listbox that takes more than one answer', async () => {
+    expect((await fieldNamed('hobbies')).multiSelect).toBe(true);
+  });
+
+  it('labels a radio group readably while keeping the value it stores', async () => {
+    // The appearance state is what the field stores and what fill() takes,
+    // and it is frequently just "0" and "1". The export value is the wording
+    // a person should see. Showing the wrong one either confuses the reader
+    // or produces a value the document rejects.
+    const contact = await fieldNamed('contact');
+
+    expect(contact.type).toBe('radio');
+    expect(contact.options).toEqual([
+      { value: '0', display: 'Email' },
+      { value: '1', display: 'Phone' },
+    ]);
+  });
+
+  it('still fills every one of them', async () => {
+    const filled = await fillFormBytes(await makeVariedFormPdf(), {
+      pin: '1234',
+      comments: 'Two\nlines',
+      city: 'Geneva',
+      hobbies: ['Chess', 'Reading'],
+      // The stored value, not the label: see the radio test above.
+      contact: '1',
+    });
+
+    const after = await readFormFieldsBytes(filled);
+    const value = (name: string) =>
+      after.find((field) => field.name === name)?.value;
+
+    expect(value('pin')).toBe('1234');
+    expect(value('comments')).toBe('Two\nlines');
+    // Not one of the listed options, which is the point of an editable combo.
+    expect(value('city')).toBe('Geneva');
+    expect(value('hobbies')).toEqual(['Chess', 'Reading']);
+    expect(value('contact')).toBe('1');
   });
 });
