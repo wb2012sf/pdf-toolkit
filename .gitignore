@@ -9,5 +9,15 @@ packages/desktop/src-tauri/target/
 packages/desktop/src-tauri/gen/
 # Installers pulled down with `gh run download`, which lands them here
 pdf-toolkit-windows/
+# Installers downloaded from a release land loose, usually in the repo root
+*.exe
+*.msi
+
+# Signing certificates. Anyone using `sign` will have one of these on the
+# machine, and it holds a private key, so the pattern is deliberately broad
+# and the throwaway test fixture is let back in by name.
+*.p12
+*.pfx
+!packages/core/test/fixtures/test-signing.p12
 # Written by CI when signing credentials exist, never committed
 packages/desktop/src-tauri/tauri.signing.conf.json
