@@ -387,6 +387,14 @@ input[type="radio"] {
   gap: 0.9rem;
 }
 
+/* Load bearing. show() switches panels with the hidden attribute, which the
+   browser honours as display:none from its own stylesheet. Any author rule
+   setting display beats that, so without this every panel stays on screen at
+   once and the tabs appear to do nothing. */
+.panel[hidden] {
+  display: none;
+}
+
 /* A short line under the tabs saying what this operation does. */
 .what {
   margin: 0;

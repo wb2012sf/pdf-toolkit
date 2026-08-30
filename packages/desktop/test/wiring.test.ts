@@ -84,6 +84,48 @@ describe('the page and the script agree on element ids', () => {
     expect([...listed].sort()).toEqual([...tabs].sort());
   });
 
+  it('never lets a display rule defeat the hidden attribute', async () => {
+    // How the tabs broke once: .panel was given display:grid, and an author
+    // display rule beats the browser's own [hidden] { display: none }. Every
+    // panel stayed on screen at once and switching tabs did nothing visible.
+    // Nothing else catches it, since the markup and the script are both fine.
+    //
+    // Limited to classes the markup itself marks hidden. A class hidden only
+    // from TypeScript would slip through, so keep display rules off those.
+    const css = await readFile(join(ROOT, 'src', 'style.css'), 'utf8');
+    const html = await readFile(join(ROOT, 'index.html'), 'utf8');
+
+    // Every class the markup ever marks hidden. Asking per class rather than
+    // parsing the whole stylesheet, because the @media block's nested braces
+    // defeat any simple rule splitter and quietly make this check vacuous.
+    const hiddenClasses = new Set<string>();
+    for (const tag of html.matchAll(/<[^>]*\bhidden\b[^>]*>/g)) {
+      const classes = (tag[0] as string).match(/class="([^"]*)"/);
+      for (const name of (classes?.[1] ?? '').split(/\s+/)) {
+        if (name.length > 0) {
+          hiddenClasses.add(name);
+        }
+      }
+    }
+    expect(hiddenClasses.size).toBeGreaterThan(0);
+
+    const offenders: string[] = [];
+    for (const name of hiddenClasses) {
+      const rule = css.match(new RegExp(`\\.${name}\\s*\\{([^}]*)\\}`));
+      const display = rule?.[1]?.match(/display\s*:\s*([a-z-]+)/);
+      if (display === undefined || display === null) {
+        continue;
+      }
+      if (display[1] !== 'none' && !css.includes(`.${name}[hidden]`)) {
+        offenders.push(
+          `.${name} sets display:${display[1]} but has no .${name}[hidden] override`
+        );
+      }
+    }
+
+    expect(offenders).toEqual([]);
+  });
+
   it('the markup loads the script and the stylesheet', async () => {
     const html = await readFile(join(ROOT, 'index.html'), 'utf8');
 
