@@ -252,6 +252,26 @@ Traps found while implementing, each now guarded by a test:
   reader's judgement against its own trust list, not something the signer
   reports, so an empty `warnings` array says nothing about whether Acrobat
   will accept it.
+- **`extractText()` exhausts memory on a document opened with the wrong
+  password.** Not an exception, not an empty result: the Node process dies
+  with "Ineffective mark-compacts near heap limit". It parses streams it
+  cannot decrypt and allocates without bound. Nothing here calls it, so
+  nothing here is affected, but check `isAuthenticated` first if that ever
+  changes. This is the call page-label inference would need, so that idea
+  starts with a guard rather than ends with one. By contrast `getForm()`
+  returns null on the same document, which is why `readFormFieldsBytes` gives
+  an empty list for an encrypted file instead of falling over.
+- **Radio groups store appearance states, not the words you see.**
+  `getOptions()` gives names that are frequently just "0" and "1", and those
+  are what the field holds and what `fill()` accepts. `getExportValues()`
+  gives the readable wording. Send the wording and the document rejects it.
+  They are paired in `FormFieldOption`: `value` is written, `display` is
+  shown.
+- **Field kind flags decide the control, and missing them all looks the
+  same.** `maxLength`, `isMultiline`, `isEditable` and `isMultiSelect` are
+  the difference between a form that works and one where every text field is
+  a single line and every choice is a dropdown. There is no error to notice;
+  it just quietly renders the wrong thing.
 
 LibPDF covers four of the five old exclusions. Ranked by how well each fits
 what is already built, not by how interesting it is:
@@ -259,6 +279,15 @@ what is already built, not by how interesting it is:
 1. **Encryption.** The best fit, and far easier than its place on a list of
    v1 exclusions suggests. The `qpdf` ban above was a scope guard to keep v1
    finishable, not a statement that this is hard.
+   The two passwords answer different questions, which is worth knowing before
+   explaining them to anyone: the user password decides whether the document
+   opens at all and is real cryptography, while the owner password decides
+   whether the permission flags apply to the reader and is advisory. Set only
+   an owner password and the file opens for everybody, restricted; set only a
+   user password and LibPDF invents a random owner password nobody ever sees,
+   so that file has no owner rights available to anyone. Either password lets
+   `unlock` strip the restrictions entirely, verified, so permissions stop
+   nobody who is determined.
    RC4-40, RC4-128, AES-128 and AES-256 across revisions R2 to R6, reading and
    writing. `PDF.load(bytes, { credentials })` opens a protected file,
    `setProtection()` applies protection with user and owner passwords and
