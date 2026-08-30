@@ -36,10 +36,16 @@ body {
 }
 
 main {
-  max-width: 42rem;
+  /* Wide enough that eleven tabs sit on two rows rather than three. */
+  max-width: 46rem;
   margin: 0 auto;
   display: grid;
-  gap: 1.5rem;
+  gap: 1.25rem;
+}
+
+header {
+  padding-bottom: 0.25rem;
+  border-bottom: 1px solid var(--line);
 }
 
 h1 {
@@ -76,11 +82,22 @@ button:disabled {
   cursor: not-allowed;
 }
 
-#merge {
+/* The button that performs the operation, one per panel. Matched by the id
+   suffix rather than a class, so the markup stays as it is. */
+button[id$="-run"] {
   background: var(--accent);
   color: var(--accent-ink);
   border-color: transparent;
   font-weight: 600;
+}
+
+button[id$="-run"]:hover:not(:disabled) {
+  filter: brightness(1.08);
+}
+
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
 }
 
 .dropzone {
@@ -214,14 +231,41 @@ button:disabled {
   color: var(--muted);
 }
 
-#output-name {
+/* Every text-like control, styled once. Before this they were browser
+   defaults, which is why the app looked unfinished next to its own panels. */
+input[type="text"],
+input[type="password"],
+input[type="number"],
+input[type="file"],
+select,
+textarea {
   font: inherit;
-  flex: 1 1 14rem;
+  width: 100%;
   padding: 0.45rem 0.6rem;
   border: 1px solid var(--line);
   border-radius: var(--radius);
   background: var(--panel);
   color: var(--ink);
+}
+
+select {
+  cursor: pointer;
+}
+
+input[type="checkbox"],
+input[type="radio"] {
+  accent-color: var(--accent);
+  width: 1rem;
+  height: 1rem;
+  margin: 0;
+  flex: none;
+}
+
+/* The output name sits inline with its label and button, so it grows rather
+   than filling the row. */
+.actions input[type="text"] {
+  width: auto;
+  flex: 1 1 12rem;
 }
 
 .status {
@@ -302,4 +346,81 @@ button:disabled {
 
 .fields input:disabled {
   color: var(--muted);
+}
+
+/* --- tabs ---------------------------------------------------------------
+   There are eleven of these now, so they wrap. The current one was already
+   marked with aria-current for screen readers; this makes it visible to
+   everyone else too, which it previously was not. */
+
+.tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+  padding: 0.3rem;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: calc(var(--radius) + 2px);
+}
+
+.tabs button {
+  border-color: transparent;
+  background: transparent;
+  padding: 0.35rem 0.7rem;
+}
+
+.tabs button:hover:not([aria-current="true"]) {
+  background: color-mix(in srgb, var(--accent) 10%, transparent);
+  border-color: transparent;
+}
+
+.tabs button[aria-current="true"] {
+  background: var(--accent);
+  color: var(--accent-ink);
+  font-weight: 600;
+}
+
+/* --- panels -------------------------------------------------------------- */
+
+.panel {
+  display: grid;
+  gap: 0.9rem;
+}
+
+/* A short line under the tabs saying what this operation does. */
+.what {
+  margin: 0;
+  color: var(--muted);
+}
+
+/* One labelled control. The caption sits above so a long form field label
+   does not squeeze the input, and so every panel lines up the same way. */
+.field {
+  display: grid;
+  gap: 0.25rem;
+}
+
+.field > span {
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+/* A checkbox or a radio group reads better beside its caption than under it. */
+.field:has(> input[type="checkbox"]),
+.field:has(> .radios) {
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.field:has(> input[type="checkbox"]) > span,
+.field:has(> .radios) > span {
+  color: var(--ink);
+  font-size: 1rem;
+}
+
+.actions {
+  padding-top: 0.2rem;
+  border-top: 1px solid var(--line);
+  margin-top: 0.2rem;
 }
