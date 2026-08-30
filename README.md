@@ -382,11 +382,39 @@ pdf-toolkit extract book.pdf -p 2-5 -o chapter.pdf
 
 ### protect and unlock
 
-Encrypts with AES-256 unless told otherwise. Give a user password, an owner
-password, or both. The user password is needed to open the document at all.
-The owner password grants full rights, lifting the permission restrictions
-for whoever holds it, so setting only an owner password gives a file anyone
-can open but not, say, copy text out of.
+Encrypts with AES-256 unless told otherwise. There are two passwords and they
+answer two different questions.
+
+**The user password decides whether the document opens at all.** This is real
+encryption. Without it the contents cannot be recovered by anything, including
+this tool.
+
+**The owner password decides whether the restrictions apply to you.** It does
+not gate access. A file with only an owner password opens for anyone, with no
+password at all, but a well-behaved reader will honour whatever you forbade.
+Supplying the owner password lifts those restrictions.
+
+So the three useful combinations:
+
+| You set | Who can open it | Who is restricted |
+| --- | --- | --- |
+| User password only | Only people with it | Everyone who opens it |
+| Owner password only | Anyone at all | Everyone except the owner |
+| Both | Only people with either | Everyone but the owner |
+
+"Owner password only" is what most restricted PDFs on the web are: readable by
+anyone, with a request attached not to print or copy.
+
+Two things that surprise people:
+
+Setting **only** a user password makes the library invent a random owner
+password that nobody ever sees, so no owner rights exist for that file. That
+is harmless, because `unlock` accepts either password.
+
+And **the restrictions are advisory.** Anyone who can open the document can
+strip them, including with this tool: `unlock` with either password produces
+an unrestricted file. Permissions express an intention to a cooperating
+reader. Only the user password stops anybody.
 
 Note what neither password does here: `protect` refuses a document that is
 already protected. To change protection, `unlock` it and protect it again.
@@ -402,9 +430,7 @@ pdf-toolkit unlock tax-locked.pdf -p hunter2 -o tax.pdf
 
 Permissions are allowed unless you forbid them: `--no-print`,
 `--no-print-high-quality`, `--no-modify`, `--no-copy`, `--no-annotate`,
-`--no-fill-forms`, `--no-accessibility`, `--no-assemble`. They are advisory,
-and a reader that chooses to ignore them is not stopped by anything in the
-file. The password is not advisory; the content is genuinely encrypted.
+`--no-fill-forms`, `--no-accessibility`, `--no-assemble`.
 
 `unlock` checks the password before writing anything, so a typo fails with a
 message instead of leaving you an output file that cannot be read.
