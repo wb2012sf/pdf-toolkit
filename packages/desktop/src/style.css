@@ -432,3 +432,11 @@ input[type="radio"] {
   border-top: 1px solid var(--line);
   margin-top: 0.2rem;
 }
+
+/* A short explanation under a group of controls, for the cases where the
+   caption alone cannot carry the meaning. */
+.hint {
+  margin: -0.4rem 0 0;
+  color: var(--muted);
+  font-size: 0.85rem;
+}

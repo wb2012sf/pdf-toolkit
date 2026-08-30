@@ -222,9 +222,14 @@
           <input type="password" id="protect-password" autocomplete="new-password" />
         </label>
         <label class="field">
-          <span>Owner password, which lifts the restrictions below (optional)</span>
+          <span>Owner password, which lifts the restrictions</span>
           <input type="password" id="protect-owner" autocomplete="new-password" />
         </label>
+        <p class="hint">
+          Set at least one. Set only an owner password and the file opens for
+          anyone without a password, while readers are still asked to respect
+          the restrictions below; the owner password is what lifts them.
+        </p>
         <label class="field">
           <span>Encryption</span>
           <select id="protect-algorithm">

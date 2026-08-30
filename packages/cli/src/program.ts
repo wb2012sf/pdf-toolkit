@@ -273,7 +273,7 @@ export function buildProgram(): Command {
       )
       .option(
         '--owner-password <password>',
-        'password that grants full rights, lifting the restrictions below'
+        'password that lifts the restrictions for whoever holds it'
       )
       .option(
         '-a, --algorithm <name>',
